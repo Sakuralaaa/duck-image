@@ -140,7 +140,8 @@ function pushContentItem(item, systemParts, conversation, state = { pendingImage
   if (type === 'input_image') {
     // v2.44：图像输入 → 真实 image part（data URL），交给上游多模态
     const image = normalizeImagePart(item);
-    if (image) state.pendingImages.push(image);
+    if (!image) throw badRequest('Image input must be a base64 data:image URL; remote URLs and file IDs are not supported', 'image_url', 'invalid_image');
+    state.pendingImages.push(image);
     return null;
   }
   if (type === 'input_file') return null;
@@ -201,7 +202,24 @@ export function normalizeResponsesInput(input, { allowEmptyUser = false } = {}) 
   if (typeof input === 'string') {
     if (input.trim()) conversation.push({ role: 'user', content: input });
   } else if (Array.isArray(input)) {
-    for (const item of input) pushContentItem(item, systemParts, conversation, state);
+    for (let index = 0; index < input.length; index += 1) {
+      const type = typeof input[index]?.type === 'string' ? input[index].type.toLowerCase() : '';
+      if (['input_text', 'text', 'output_text', 'input_image'].includes(type)) {
+        const parts = [];
+        while (index < input.length) {
+          const nextType = typeof input[index]?.type === 'string' ? input[index].type.toLowerCase() : '';
+          if (!['input_text', 'text', 'output_text', 'input_image'].includes(nextType)) break;
+          parts.push(input[index]);
+          index += 1;
+        }
+        index -= 1;
+        const normalized = normalizeContentParts(parts);
+        const images = [...state.pendingImages.splice(0), ...normalized.images];
+        conversation.push({ role: 'user', content: normalized.text, ...(images.length ? { images } : {}) });
+      } else {
+        pushContentItem(input[index], systemParts, conversation, state);
+      }
+    }
     if (state.pendingImages.length) {
       conversation.push({ role: 'user', content: '（上一轮生成的图片）', images: state.pendingImages.splice(0) });
     }

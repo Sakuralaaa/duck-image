@@ -163,7 +163,7 @@ test('messages：system/developer 合并 + 多轮历史 + 数组 content + 引�
         messages: [
           { role: 'system', content: '你是简洁助手。' },
           { role: 'developer', content: '回答用中文。' },
-          { role: 'user', content: [{ type: 'text', text: '北京天气？' }, { type: 'image_url', image_url: { url: 'ignored' } }] },
+          { role: 'user', content: [{ type: 'text', text: '北京天气？' }, { type: 'image_url', image_url: { url: `data:image/png;base64,${PNG_1X1_B64}` } }] },
           { role: 'assistant', content: '正在查询。' },
           { role: 'user', content: '现在呢？' }
         ]
@@ -177,7 +177,7 @@ test('messages：system/developer 合并 + 多轮历史 + 数组 content + 引�
     assert.match(messages[0].content, /^\[系统指令\] 你是简洁助手。/);
     assert.match(messages[0].content, /回答用中文。/);
     assert.match(messages[0].content, /\[用户\] 北京天气？/);
-    assert.doesNotMatch(messages[0].content, /ignored/, '图片 part 被忽略');
+    assert.equal(messages[0].images?.length, 1, '图片应保留在独立的 images 字段');
     assert.deepEqual(messages[1], { role: 'assistant', content: '正在查询。' });
     assert.deepEqual(messages[2], { role: 'user', content: '现在呢？' });
     // 正文中的 citation 标记转为 [N]

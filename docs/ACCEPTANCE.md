@@ -18,6 +18,12 @@
 - 行内引用按来源 id 显示为可点击链接，未知、不安全和存在冲突的来源保留为普通编号；连接测试、Chat Completions 与 Responses 均支持。
 - 覆盖流式分片、最终来源、异常来源及前端链接渲染的离线用例已添加；**待验证**：尚未执行本地构建、测试或第三方客户端实测。
 
+## 2026-11-07：客户端对话图片输入
+
+- 修复 Chat Completions 续聊上传图片时，归一化结果被原始 `image_url` 对象覆盖而未传给上游的问题。
+- 支持 Chat Completions 纯图片输入，以及 Responses 直接传入文本和图片 part；远程 URL、文件 ID 和格式无效的 data URL 返回 `invalid_image`。
+- 已增加 mock 上游及真实上游报文构造的测试用例；**待验证**：尚未进行第三方客户端与真实 duck.ai 联调。
+
 > 版本：v2（React + shadcn 控制台；BREAKING：强制 API Key / RPS 队列 / 日志拆分 / 付费模型 / 会话式连接测试 / 严格中断）
 > v2.1：会话「重新生成/重试」+ 推理（reasoning）展示与 `reasoningEncrypted` 标记。
 > v2.2：**稳定匿名身份**（journeyId/deviceId/durable-stream 密钥持久化，重启不漂移）+ 身份/ Sync & Backup / DuckDuckGo 订阅控制页。

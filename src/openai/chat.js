@@ -190,8 +190,7 @@ const TEXT_PART_TYPES = new Set(['text', 'input_text', 'output_text']);
 
 /**
  * Normalize message content to plain text.
- * Accepts a string or an array of parts; non-text parts (images/files) are
- * ignored because the duck.ai text chat is the only upstream capability.
+ * Accepts a string or an array of parts; image parts are processed separately.
  */
 export function normalizeContent(content) {
   return normalizeContentParts(content).text;
@@ -223,7 +222,10 @@ export function normalizeContentParts(content) {
     }
     if (type === 'image_url' || type === 'input_image' || type === 'image') {
       const image = normalizeImagePart(part);
-      if (image) images.push(image);
+      if (!image) {
+        throw badRequest('Image input must be a base64 data:image URL; remote URLs and file IDs are not supported', 'image_url', 'invalid_image');
+      }
+      images.push(image);
     }
   }
   return { text: parts.join('\n'), images };
@@ -239,7 +241,7 @@ export function normalizeImagePart(part) {
   else if (typeof part.url === 'string') raw = part.url;
   raw = raw.trim();
   if (!raw.startsWith('data:image/')) return null;
-  const match = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/);
+  const match = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/]+={0,2})$/);
   if (!match) return null;
   return { mimeType: match[1], dataUrl: raw };
 }
@@ -293,8 +295,8 @@ export function normalizeChatMessages(rawMessages, { allowEmptyUser = false } = 
     throw badRequest(`messages[${index}].role "${role || '(missing)'}" is not supported`, 'messages');
   });
 
-  const hasUserText = conversation.some((message) => message.role === 'user' && message.content.trim());
-  if (!allowEmptyUser && (userMessages === 0 || !hasUserText)) {
+  const hasUserInput = conversation.some((message) => message.role === 'user' && (message.content.trim() || message.images?.length));
+  if (!allowEmptyUser && (userMessages === 0 || !hasUserInput)) {
     throw badRequest('messages must contain at least one non-empty user message', 'messages');
   }
 
@@ -1146,11 +1148,9 @@ export async function handleChatCompletions(req, res, ctx) {
       const tailConversation = tail.conversation.map((message, index) => {
         const raw = tailRaw[index];
         if (!raw) return message;
-        const rawImages = Array.isArray(raw.images) && raw.images.length
-          ? raw.images
-          : Array.isArray(raw.content)
-            ? raw.content.filter((part) => part && (part.type === 'image_url' || part.type === 'input_image'))
-            : [];
+        const rawImages = message.images?.length
+          ? message.images
+          : Array.isArray(raw.images) ? raw.images : [];
         return rawImages.length ? { ...message, images: rawImages } : message;
       });
       if (tail.systemParts.length === 0) {

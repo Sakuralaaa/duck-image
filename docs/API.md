@@ -284,7 +284,7 @@ POST /v1/chat/completions
 - `role`：`system` / `developer` / `user` / `assistant`；
 - `content`：字符串，或 `[{ "type": "text", "text": "..." }]` 形式的 parts 数组；
 - `system` / `developer` 消息会与网关默认提示词合并（见 [FAQ](#system-prompt-为什么默认走-inline-模式)）；
-- 图片（`image_url`）、文件等非文本 part **会被忽略**（不报错）；
+- `image_url` 支持 `data:image/...;base64,...` 图片并作为图像传给上游；远程图片 URL 和文件 ID 不支持，会返回 `invalid_image`；
 - 多轮对话直接把历史 `user` / `assistant` 消息按顺序传入即可。
 
 > OpenAI 的 `temperature` / `max_tokens` / `top_p` / `stop` 等采样参数**当前不支持**（上游为网页会话协议），
@@ -1108,8 +1108,9 @@ Chat Completions 没有官方的 assistant 图片字段，采用主流 OpenAI �
 
 ### 图片输入 / 生图上下文
 
-- `/v1/chat/completions`：user content 支持 `{type:"image_url",image_url:{url:"data:image/png;base64,..."}}`。
-- `/v1/responses`：支持 `input_image`；上一轮 `image_generation_call` item 原样回传时，网关保留真实图片并挂到下一轮 user 消息（不再变文本）。
+- `/v1/chat/completions`：user content 支持 `{type:"image_url",image_url:{url:"data:image/png;base64,..."}}`，续聊中的图片也会发送给上游；可以只发送图片。
+- `/v1/responses`：支持 `input_image`，包括直接传入文本与图片 part；上一轮 `image_generation_call` item 原样回传时，网关保留真实图片并挂到下一轮 user 消息（不再变文本）。
+- 图片需为 base64 data URL；远程 URL、文件 ID 和格式无效的 data URL 不会被静默忽略，接口返回 `invalid_image`。
 - 上游图像输入只接受 PNG/WebP（JPEG 返回 400 sc22）：网关用 `jpeg-js` + `pngjs` 统一转 PNG 并缩到 **512px**；超过限制的图片会被压缩。
 - 仅图片的响应仍补 `message` + `output_text` 兜底，避免客户端显示空消息。
 
