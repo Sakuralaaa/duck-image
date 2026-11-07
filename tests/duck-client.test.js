@@ -138,7 +138,7 @@ test('init(): 首页版本 + /status 挑战求解 + capabilities', async () => {
 
     const catalog = client.getModelCatalog();
     assert.ok(Array.isArray(catalog));
-    assert.equal(catalog.length, 10);
+    assert.equal(catalog.length, 7);
     assert.ok(catalog.every((model) => typeof model.model === 'string' && typeof model.id === 'string'));
   } finally {
     mock.restore();

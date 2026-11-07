@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, ApiError } from '@/app/lib/api';
+import { hashParam } from '@/app/lib/hash-route';
 import type { Config, ConfigResponse, UpdateConfigResponse } from '@/app/lib/types';
 import { PageHeader } from '@/app/components/page-header';
 import { ErrorBanner } from '@/app/components/error-banner';
@@ -219,6 +220,12 @@ export function SettingsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /** 旧地址 #/proxy 会跳到 #/settings?section=proxy：加载完成后滚动到代理区块。 */
+  useEffect(() => {
+    if (loading || hashParam('section') !== 'proxy') return;
+    document.querySelector('[data-testid="settings-proxy"]')?.scrollIntoView({ block: 'start' });
+  }, [loading]);
 
   const patch = (values: Partial<FormState>) => setForm((current) => ({ ...current, ...values }));
 

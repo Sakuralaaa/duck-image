@@ -35,7 +35,6 @@ import type {
   TestStreamEvent
 } from '@/app/lib/types';
 import { useOverview } from '@/app/lib/overview-context';
-import { PageHeader } from '@/app/components/page-header';
 import { ErrorBanner } from '@/app/components/error-banner';
 import { EmptyState } from '@/app/components/empty-state';
 import { ChatMessageBubble } from '@/app/components/chat-message';
@@ -1546,26 +1545,23 @@ export function PlaygroundPage() {
   );
 
   return (
-    <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[760px] flex-col">
-      <PageHeader
-        title="Duck Chat"
-        actions={
-          <>
-            <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)} data-testid="chat-history-toggle">
-              <History className="h-4 w-4" />
-              历史
-            </Button>
-            <Button size="sm" variant="outline" onClick={newChat} data-testid="chat-new">
-              <Plus className="h-4 w-4" />
-              新对话
-            </Button>
-          </>
-        }
-      />
+    <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col">
+      <div className="flex h-9 items-center justify-end gap-1">
+        <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)} data-testid="chat-history-toggle">
+          <History className="h-4 w-4" />
+          历史
+        </Button>
+        {hasConversation ? (
+          <Button size="sm" variant="ghost" onClick={newChat} data-testid="chat-new">
+            <Plus className="h-4 w-4" />
+            新对话
+          </Button>
+        ) : null}
+      </div>
 
       {error ? <ErrorBanner message={error} onRetry={() => void loadSessions()} /> : null}
 
-      <div className={cn('flex flex-1 flex-col', !hasConversation && 'items-center pt-[14vh] text-center')}>
+      <div className={cn('flex flex-1 flex-col', !hasConversation && 'items-center pt-[8vh] text-center')}>
         {hasConversation ? (
           <div className="flex flex-1 flex-col">
           <div className="mb-2 flex min-h-8 items-center gap-2 text-[13px] text-muted-foreground">
@@ -1606,7 +1602,7 @@ export function PlaygroundPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => openRename(activeSession)}>
+                  <DropdownMenuItem onSelect={() => activeSession && openRename(activeSession)}>
                     <Pencil className="h-3.5 w-3.5" />
                     重命名
                   </DropdownMenuItem>

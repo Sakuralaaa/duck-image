@@ -904,7 +904,7 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索提示词" className="h-9 pl-8" />
             </form>
-            <Button size="sm" variant={favoritesOnly ? 'default' : 'ghost'} onClick={() => setFavoritesOnly((value) => !value)}>
+            <Button size="sm" variant={favoritesOnly ? 'secondary' : 'ghost'} onClick={() => setFavoritesOnly((value) => !value)}>
               <Heart className={cn('h-3.5 w-3.5', favoritesOnly ? 'fill-current' : '')} />
               收藏
             </Button>
@@ -1005,7 +1005,7 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
               <div ref={feedEnd} />
             </div>
           ) : (
-            <div className="flex flex-1 flex-col items-center pt-[14vh] text-center">
+            <div className="flex flex-1 flex-col items-center pt-[8vh] text-center">
               <h1 className="text-[26px] font-semibold tracking-tight">想画点什么？</h1>
               <div className="mt-6 w-full text-left">{composer}</div>
               {items.length ? (
@@ -1014,7 +1014,7 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
                     <span>最近作品</span>
                     <a href="#/gallery" className="transition-colors hover:text-foreground">查看全部</a>
                   </div>
-                  <div className="grid grid-cols-6 gap-3">
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
                     {items.slice(0, 6).map((item) => (
                       <button
                         key={item.id}

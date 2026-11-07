@@ -124,10 +124,7 @@ export function KeysPage() {
                 <tr key={item.id} className="border-t border-border transition-colors hover:bg-muted/40">
                   <td className="px-3 py-3 font-medium">{item.label || '未命名'}</td>
                   <td className="px-3 py-3">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="font-mono text-[12.5px] text-muted-foreground">{item.keyPreview}</span>
-                      <CopyButton value={item.keyPreview} size="sm" variant="ghost" />
-                    </span>
+                    <span className="font-mono text-[12.5px] text-muted-foreground">{item.keyPreview}</span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-[13px] text-muted-foreground">
                     {item.lastUsedAt ? formatRelative(item.lastUsedAt) : '—'}
@@ -204,10 +201,22 @@ export function KeysPage() {
             </div>
           ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreated(null)}>
+            <Button variant="ghost" onClick={() => setCreated(null)}>
               关闭
             </Button>
-            {created ? <CopyButton value={created.key} label="复制并关闭" /> : null}
+            {created ? (
+              <Button
+                onClick={() => {
+                  void navigator.clipboard?.writeText(created.key).then(
+                    () => toast.success('已复制'),
+                    () => toast.error('复制失败，请手动复制')
+                  );
+                  setCreated(null);
+                }}
+              >
+                复制并关闭
+              </Button>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
