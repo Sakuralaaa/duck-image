@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowUp,
   ChevronDown,
+  History,
   Globe2,
   Image as ImageIcon,
   Loader2,
@@ -343,6 +345,17 @@ export function PlaygroundPage() {
   const [model, setModel] = useState('gpt-6-luna');
   const [reasoning, setReasoning] = useState('none');
   const [webSearch, setWebSearch] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
+  const plusRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!plusOpen) return;
+    const close = (event: MouseEvent) => {
+      if (plusRef.current && !plusRef.current.contains(event.target as Node)) setPlusOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [plusOpen]);
   const [imageGeneration, setImageGeneration] = useState(false);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -689,7 +702,7 @@ export function PlaygroundPage() {
         if (current && items.some((session) => session.id === current)) return current;
         const persisted = readPersistedSession();
         if (persisted && items.some((session) => session.id === persisted)) return persisted;
-        return items[0]?.id ?? null;
+        return null;
       });
       setError(null);
     } catch (err) {
@@ -1266,6 +1279,11 @@ export function PlaygroundPage() {
 
   const activeTitle = activeSession?.title || '新会话';
   const canSend = input.trim().length > 0 && !activeStreaming;
+  const newChat = () => {
+    setActiveId(null);
+    setHistoryOpen(false);
+    setInput('');
+  };
   const activeSummary = activeSession?.summary ?? null;
   const activeSummaryCount = summaryCoveredCount(activeSummary);
   const activeSummaryText = summaryPlainText(activeSummary);
@@ -1283,8 +1301,6 @@ export function PlaygroundPage() {
                   <ModelCapabilityBadges model={item} />
                 </span>
               </div>
-              <ModelContextLine model={item} />
-              <ModelCompactionBadge model={item} />
             </div>
           </SelectItem>
         ))}
@@ -1318,8 +1334,6 @@ export function PlaygroundPage() {
                       <ModelCapabilityBadges model={item} />
                     </span>
                   </div>
-                  <ModelContextLine model={item} />
-                  <ModelCompactionBadge model={item} />
                 </div>
               </SelectItem>
             );
@@ -1403,333 +1417,275 @@ export function PlaygroundPage() {
                   ) : null}
                 </div>;
 
-  return (
-    <div>
-      <PageHeader title="对话测试" description="会话式连续对话：多轮上下文由服务端保存，刷新后历史仍在" />
+  const hasConversation = Boolean(activeId) && (messages.length > 0 || Boolean(draft) || messagesLoading);
+  const effortOptions = reasoningOptions.filter((value) => ['none', 'low', 'medium'].includes(value));
 
-      {error ? <ErrorBanner message={error} onRetry={() => void loadSessions()} /> : null}
-
-      <div className="flex h-[calc(100vh-230px)] min-h-[560px] gap-3">
-        <Card className="hidden w-64 shrink-0 flex-col overflow-hidden md:flex">
-          <SessionsPanel
-            sessions={sessions}
-            activeId={activeId}
-            loading={sessionsLoading}
-            streamingSessions={streamingSessions}
-            onSelect={selectSession}
-            onCreate={() => void createSession()}
-            onRename={openRename}
-            onDelete={setDeleteTarget}
-            selected={selectedSessions}
-            onToggleSelect={toggleSessionSelected}
-            onToggleSelectAll={toggleSelectAllSessions}
-            onBulkDelete={() => setBulkDeleteOpen(true)}
-            className="min-h-0 flex-1"
-          />
-        </Card>
-
-        <Card className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="flex items-center gap-2 border-b px-3 py-2.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 md:hidden"
-              aria-label="会话列表"
-              onClick={() => setMobileSessionsOpen(true)}
+  const composer = (
+    <div className={cn('z-20 w-full', hasConversation ? 'sticky bottom-4 pb-2' : '')}>
+      <div className="rounded-2xl border border-border bg-card px-3 pb-2.5 pt-3 shadow-lift transition-shadow focus-within:border-[color:hsl(var(--ring)/0.5)]">
+        <Textarea
+          value={input}
+          rows={1}
+          placeholder="问点什么…"
+          className="max-h-48 min-h-[44px] resize-none !border-0 !bg-transparent px-1.5 py-1 text-[15px] leading-relaxed shadow-none focus-visible:ring-0"
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              void send();
+            }
+          }}
+          disabled={activeStreaming}
+        />
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="relative" ref={plusRef}>
+            <button
+              type="button"
+              aria-label="更多选项"
+              onClick={() => setPlusOpen((value) => !value)}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground',
+                plusOpen && 'bg-muted text-foreground'
+              )}
             >
-              <MessagesSquare className="h-4 w-4" />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{activeId ? activeTitle : '未选择会话'}</div>
-              {activeId ? (
-                <div className="mt-0.5 flex min-w-0 items-center gap-1" data-testid="active-session-id">
-                  <span className="shrink-0 text-[10px] text-muted-foreground">会话 ID</span>
-                  <span className="truncate font-mono text-[10px] text-foreground/80" title={activeId}>
-                    {activeId}
-                  </span>
-                  <CopyButton value={activeId} size="sm" variant="ghost" />
-                </div>
-              ) : null}
-              <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
-                {activeId ? (
-                  <>
-                    <Badge variant="outline" className="font-mono text-[10px]">
-                      {activeSession?.model ?? model}
-                    </Badge>
-                    <Badge variant="muted" className="text-[10px]">
-                      reasoning {activeSession?.reasoningEffort ?? reasoning}
-                    </Badge>
-                    {activeSession?.webSearch ? <Badge variant="info" className="text-[10px]">联网</Badge> : null}
-                    {activeSummaryCount > 0 ? (
+              <Plus className={cn('h-4 w-4 transition', plusOpen && 'rotate-45')} />
+            </button>
+            {plusOpen ? (
+              <div className={cn('absolute left-0 z-30 w-64 space-y-3 rounded-xl border border-border bg-popover p-3 text-left shadow-lift', hasConversation ? 'bottom-11' : 'top-11')}>
+                <div>
+                  <div className="mb-1.5 px-1 text-[12px] font-medium text-muted-foreground">推理强度</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(effortOptions.length ? effortOptions : [reasoning]).map((value) => (
                       <button
+                        key={value}
                         type="button"
-                        data-testid="summary-badge"
-                        className="inline-flex items-center gap-0.5 rounded-md border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-[10px] text-primary transition-colors hover:bg-primary/10"
-                        title="展开对话中压缩位置的上下文摘要折叠块"
-                        onClick={focusSummaryCard}
+                        disabled={activeStreaming}
+                        onClick={() => {
+                          setReasoning(value);
+                          patchSessionSettings({ reasoningEffort: value });
+                        }}
+                        className={cn(
+                          'rounded-full border px-3 py-1 text-[12.5px] transition-colors',
+                          reasoning === value ? 'border-foreground bg-foreground text-background' : 'border-border text-muted-foreground hover:text-foreground'
+                        )}
                       >
-                        <Sparkles className="h-2.5 w-2.5" />
-                        已压缩 · 覆盖 {activeSummaryCount} 条
-                        <span className="ml-0.5 underline">展开</span>
+                        {value}
                       </button>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-            </div>
-            {activeId ? (
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  data-testid="compact-session"
-                  className="h-7 gap-1 text-xs"
-                  disabled={activeStreaming || compacting || compactable === false}
-                  title={compactable === false ? '消息太少，暂无可压缩的历史' : '压缩会话'}
-                  onClick={() => compactSession()}
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !imageGeneration;
+                    setImageGeneration(next);
+                    patchSessionSettings({ imageGeneration: next });
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-[13px] hover:bg-muted"
                 >
-                  {compacting ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  )}
-                  压缩会话
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="会话操作">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => openRename(activeSession)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                      重命名
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onSelect={() => setDeleteTarget(activeSession)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      删除会话
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  允许生成图片
+                  <span className={cn('ml-auto h-2 w-2 rounded-full', imageGeneration ? 'bg-brand' : 'bg-muted-foreground/30')} />
+                </button>
               </div>
             ) : null}
           </div>
+          <Select
+            value={model}
+            onValueChange={(value) => {
+              setModel(value);
+              patchSessionSettings({ model: value });
+            }}
+            disabled={activeStreaming}
+          >
+            <SelectTrigger className="h-8 w-auto max-w-[200px] gap-1 rounded-full border-0 bg-muted px-3 text-[12.5px] shadow-none [&>svg]:h-3.5 [&>svg]:w-3.5">
+              <span className="truncate">{selectedModelInfo?.display_name || selectedModelInfo?.name || model || '选择模型'}</span>
+            </SelectTrigger>
+            <SelectContent className="min-w-[300px] max-w-[380px]">{modelOptions}</SelectContent>
+          </Select>
+          <button
+            type="button"
+            aria-pressed={webSearch}
+            disabled={activeStreaming}
+            onClick={() => {
+              const next = !webSearch;
+              setWebSearch(next);
+              patchSessionSettings({ webSearch: next });
+            }}
+            className={cn(
+              'inline-flex h-8 items-center gap-1 rounded-full px-3 text-[12.5px] transition-colors',
+              webSearch ? 'bg-brand/10 text-brand' : 'bg-muted text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Globe2 className="h-3.5 w-3.5" />
+            联网
+          </button>
+            {activeStreaming ? (
+              <button
+                type="button"
+                onClick={stop}
+                className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+                <span className="sr-only">停止</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!canSend}
+                onClick={() => void send()}
+                className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white shadow-soft transition hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+              >
+                <ArrowUp className="h-4 w-4" />
+                <span className="sr-only">发送</span>
+              </button>
+            )}
+        </div>
+      </div>
+    </div>
+  );
 
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-4 px-3 py-4 sm:px-4">
-              {summaryAnchorIndex === 0 ? summaryCard : null}
-              {messagesLoading && messages.length === 0 ? (
-                <div className="space-y-3">
-                  <Skeleton className="ml-auto h-16 w-2/3 rounded-2xl" />
-                  <Skeleton className="h-24 w-4/5 rounded-2xl" />
-                </div>
-              ) : messages.length === 0 && !draft ? (
-                <EmptyState
-                  icon={MessageSquarePlus}
-                  title={activeId ? '开始这段对话' : '新建一个会话'}
-                  description={
-                    activeId
-                      ? '在底部输入框输入内容并发送；服务端会保存多轮历史。'
-                      : '点击左上角「+」新建会话，或直接在底部输入框发送消息（会自动创建）。'
-                  }
-                  action={
-                    activeId ? undefined : (
-                      <Button size="sm" onClick={() => void createSession()}>
-                        <Plus className="h-3.5 w-3.5" />
-                        新建会话
-                      </Button>
-                    )
-                  }
-                />
-              ) : (
-                <>
-                  {messages.map((message, index) => (
-                    <Fragment key={message.id}>
-                      <ChatMessageBubble
-                        message={message}
-                        retrying={retryingId === message.id}
-                        retryDisabled={activeStreaming}
-                        onRetry={(target) => void retryMessage(target)}
-                      />
-                      {summaryAnchorIndex > 0 && index === summaryAnchorIndex - 1 ? summaryCard : null}
-                    </Fragment>
-                  ))}
-                  {summaryAnchorIndex > messages.length ? summaryCard : null}
-                  {draft ? <ChatMessageBubble message={draft} streaming /> : null}
-                </>
-              )}
-              <div ref={endRef} />
-            </div>
-          </ScrollArea>
+  return (
+    <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[760px] flex-col">
+      <PageHeader
+        title="Duck Chat"
+        actions={
+          <>
+            <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)} data-testid="chat-history-toggle">
+              <History className="h-4 w-4" />
+              历史
+            </Button>
+            <Button size="sm" variant="outline" onClick={newChat} data-testid="chat-new">
+              <Plus className="h-4 w-4" />
+              新对话
+            </Button>
+          </>
+        }
+      />
 
-          <div className="border-t bg-card p-3">
-            <div className="rounded-xl border bg-background focus-within:ring-1 focus-within:ring-ring">
-              <Textarea
-                value={input}
-                rows={2}
-                placeholder={
-                  activeId
-                    ? '输入消息，Enter 发送，Shift + Enter 换行'
-                    : '输入消息并发送；若未选择会话会自动新建'
-                }
-                className="min-h-[64px] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                    event.preventDefault();
-                    void send();
-                  }
-                }}
-                disabled={activeStreaming}
-              />
-              <div className="flex flex-wrap items-center gap-1.5 border-t px-2 py-1.5">
-                <Select
-                  value={model}
-                  onValueChange={(value) => {
-                    setModel(value);
-                    patchSessionSettings({ model: value });
-                  }}
-                  disabled={activeStreaming}
-                >
-                  <SelectTrigger className="h-8 w-[170px] text-xs">
-                    <span className="truncate">
-                      {selectedModelInfo?.display_name || selectedModelInfo?.name || model || '选择模型'}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[340px] max-w-[420px]">{modelOptions}</SelectContent>
-                </Select>
+      {error ? <ErrorBanner message={error} onRetry={() => void loadSessions()} /> : null}
 
-                <Select
-                  value={reasoning}
-                  onValueChange={(value) => {
-                    setReasoning(value);
-                    patchSessionSettings({ reasoningEffort: value });
-                  }}
-                  disabled={activeStreaming || reasoningOptions.length <= 1}
-                >
-                  <SelectTrigger className="h-8 w-[104px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {reasoningOptions.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={webSearch ? 'default' : 'outline'}
-                      className="h-8 gap-1 px-2 text-xs"
-                      disabled={activeStreaming}
-                      onClick={() => {
-                        const next = !webSearch;
-                        setWebSearch(next);
-                        patchSessionSettings({ webSearch: next });
-                      }}
-                    >
-                      <Globe2 className="h-3.5 w-3.5" />
-                      联网
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>允许模型联网搜索（web_search 工具）</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={imageGeneration ? 'default' : 'outline'}
-                      className="h-8 gap-1 px-2 text-xs"
-                      disabled={activeStreaming}
-                      onClick={() => {
-                        const next = !imageGeneration;
-                        setImageGeneration(next);
-                        patchSessionSettings({ imageGeneration: next });
-                      }}
-                    >
-                      <ImageIcon className="h-3.5 w-3.5" />
-                      图片
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>允许模型生成图片（image_generation 工具）</TooltipContent>
-                </Tooltip>
-
-                {currentLocked ? (
-                  <span className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
-                    <AlertTriangle className="h-3 w-3" />
-                    付费模型已禁用
-                  </span>
-                ) : null}
-
-                <div className="ml-auto flex items-center gap-1.5">
-                  <span className="hidden text-[10px] text-muted-foreground sm:inline">
-                    {activeStreaming ? '生成中…' : 'Enter 发送'}
-                  </span>
-                  {activeStreaming ? (
-                    <Button size="sm" variant="outline" className="h-8 gap-1 px-2 text-xs" onClick={stop}>
-                      <Square className="h-3 w-3" />
-                      停止
-                    </Button>
-                  ) : (
-                    <Button size="sm" className="h-8 gap-1 px-3 text-xs" disabled={!canSend} onClick={() => void send()}>
-                      {currentLocked ? <AlertTriangle className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
-                      发送
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {selectedModelInfo ? (
-                <div className="flex flex-wrap items-center gap-2 px-2.5 pb-1">
-                  <ModelContextLine model={selectedModelInfo} />
-                  <ModelCompactionBadge model={selectedModelInfo} />
-                </div>
-              ) : null}
-              {!allowPaidModels && paidModels.length > 0 ? (
-                <p className="flex items-center gap-1 border-t px-2.5 py-1 text-[10px] text-muted-foreground">
-                  <Lock className="h-3 w-3 shrink-0" />
-                  付费模型需 Duck.ai Plus/Pro 订阅；在「设置」开启 allowPaidModels 后可尝试。
-                </p>
-              ) : null}
+      <div className={cn('flex flex-1 flex-col', !hasConversation && 'items-center pt-[14vh] text-center')}>
+        {hasConversation ? (
+          <div className="flex flex-1 flex-col">
+          <div className="mb-2 flex min-h-8 items-center gap-2 text-[13px] text-muted-foreground">
+            <span className="truncate">{activeTitle}</span>
+            {activeStreaming ? (
+              <span className="inline-flex shrink-0 items-center gap-1 text-[12px]">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                生成中…
+              </span>
+            ) : null}
+            {activeSummaryCount > 0 ? (
+              <button
+                type="button"
+                data-testid="summary-badge"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11.5px] transition-colors hover:text-foreground"
+                onClick={focusSummaryCard}
+              >
+                <Sparkles className="h-3 w-3" />
+                已压缩 · 覆盖 {activeSummaryCount} 条
+              </button>
+            ) : null}
+            <div className="ml-auto flex shrink-0 items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                data-testid="compact-session"
+                className="h-7 gap-1 px-2 text-xs"
+                disabled={activeStreaming || compacting || compactable === false}
+                onClick={() => compactSession()}
+              >
+                {compacting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                压缩会话
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="会话操作">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => openRename(activeSession)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    重命名
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteTarget(activeSession)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    删除会话
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-        </Card>
+          <div className="flex-1 space-y-5 pb-6 pt-2">
+            {summaryAnchorIndex === 0 ? summaryCard : null}
+            {messagesLoading && messages.length === 0 ? (
+              <div className="space-y-3">
+                <Skeleton className="ml-auto h-12 w-2/3 rounded-2xl" />
+                <Skeleton className="h-24 w-4/5 rounded-2xl" />
+              </div>
+            ) : (
+              <>
+                {messages.map((message, index) => (
+                  <Fragment key={message.id}>
+                    <ChatMessageBubble
+                      message={message}
+                      retrying={retryingId === message.id}
+                      retryDisabled={activeStreaming}
+                      onRetry={(target) => void retryMessage(target)}
+                    />
+                    {summaryAnchorIndex > 0 && index === summaryAnchorIndex - 1 ? summaryCard : null}
+                  </Fragment>
+                ))}
+                {summaryAnchorIndex > messages.length ? summaryCard : null}
+                {draft ? <ChatMessageBubble message={draft} streaming /> : null}
+              </>
+            )}
+            <div ref={endRef} />
+          </div>
+          </div>
+        ) : (
+          <h1 className="text-[26px] font-semibold tracking-tight">有什么想聊的？</h1>
+        )}
+        <div className={cn('w-full text-left', hasConversation ? 'sticky bottom-0' : 'mt-6')}>{composer}</div>
       </div>
 
-      {/* 移动端会话抽屉 */}
-      {mobileSessionsOpen ? (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileSessionsOpen(false)} />
-          <div className="relative z-10 flex h-full w-72 flex-col bg-card shadow-xl">
-            <SessionsPanel
-              sessions={sessions}
-              activeId={activeId}
-              loading={sessionsLoading}
-              streamingSessions={streamingSessions}
-              onSelect={selectSession}
-              onCreate={() => void createSession()}
-              onRename={openRename}
-              onDelete={setDeleteTarget}
-              className="min-h-0 flex-1"
-            />
-            <div className="border-t p-2">
-              <Button variant="outline" className="w-full" size="sm" onClick={() => setMobileSessionsOpen(false)}>
-                关闭
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* 历史会话抽屉（常驻挂载，关闭时移出视口） */}
+      <div
+        className={cn('fixed inset-0 z-40 bg-black/25 backdrop-blur-[1px] transition-opacity duration-200', historyOpen ? 'opacity-100' : 'pointer-events-none opacity-0')}
+        aria-hidden="true"
+        onClick={() => setHistoryOpen(false)}
+      />
+      <aside
+        aria-label="历史会话"
+        aria-hidden={!historyOpen}
+        className={cn(
+          'fixed inset-y-0 right-0 z-50 flex w-80 flex-col border-l border-border bg-card transition-transform duration-200',
+          historyOpen ? 'translate-x-0 shadow-lift' : 'invisible translate-x-full'
+        )}
+      >
+        <SessionsPanel
+          sessions={sessions}
+          activeId={activeId}
+          loading={sessionsLoading}
+          streamingSessions={streamingSessions}
+          onSelect={(id) => {
+            selectSession(id);
+            setHistoryOpen(false);
+          }}
+          onCreate={() => {
+            newChat();
+          }}
+          onRename={openRename}
+          onDelete={setDeleteTarget}
+          selected={selectedSessions}
+          onToggleSelect={toggleSessionSelected}
+          onToggleSelectAll={toggleSelectAllSessions}
+          onBulkDelete={() => setBulkDeleteOpen(true)}
+          className="min-h-0 flex-1"
+        />
+      </aside>
 
       <Dialog open={Boolean(renameTarget)} onOpenChange={(open) => (!open ? setRenameTarget(null) : null)}>
         <DialogContent className="max-w-md">

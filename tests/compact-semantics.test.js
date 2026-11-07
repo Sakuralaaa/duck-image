@@ -31,7 +31,7 @@ test('isCompactionSupported：白名单模型 true、gpt-6-luna false、未知 f
   assert.equal(isCompactionSupported('gpt-5.4-mini'), true);
   assert.equal(isCompactionSupported('claude-sonnet-4-6'), true);
   assert.equal(isCompactionSupported('gpt-6-luna'), false);
-  assert.equal(isCompactionSupported('mistral-small-2603'), false);
+  assert.equal(isCompactionSupported('not-a-model'), false);
   assert.equal(isCompactionSupported(''), false);
   // internal-only 模型默认 false，internalTier=true 时 true
   assert.equal(isCompactionSupported('claude-haiku-5-5'), false);

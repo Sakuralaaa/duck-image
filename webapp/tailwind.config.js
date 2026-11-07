@@ -45,6 +45,7 @@ export default {
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))'
         },
+        brand: 'hsl(var(--brand))',
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
@@ -55,11 +56,15 @@ export default {
         mono: ['JetBrains Mono Variable', 'ui-monospace', 'Menlo', 'Consolas', 'Noto Sans SC Variable', 'PingFang SC', 'monospace']
       },
       borderRadius: {
-        '2xl': 'calc(var(--radius) + 4px)',
-        xl: 'calc(var(--radius) + 2px)',
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
+        '2xl': '16px',
+        xl: '12px',
+        lg: '10px',
+        md: '8px',
+        sm: '6px'
+      },
+      boxShadow: {
+        soft: 'var(--shadow-soft)',
+        lift: 'var(--shadow-lift)'
       },
       keyframes: {
         'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },

@@ -468,15 +468,15 @@ test('工具校验：默认策略丢弃不可用工具；dropUnsupported=false �
     assert.equal(duck.calls.chat[0].params.webSearch, false, '服务端关闭的 tool 应被丢弃');
   });
 
-  // 2) 默认：mistral-small-2603 不支持任何工具 → 丢弃，不报错
+  // 2) 默认：claude-haiku-5-5 不支持图片生成 → 丢弃，不报错
   const duck2 = newDuck();
   await withServer({ duck: duck2, config: makeConfig({ ...ADMIN }) }, async ({ baseUrl }) => {
     const res = await v1Request(baseUrl, '/v1/chat/completions', {
       method: 'POST',
-      body: { model: 'mistral-small-2603', messages: [{ role: 'user', content: 'x' }], tools: [{ type: 'web_search' }] }
+      body: { model: 'claude-haiku-5-5', messages: [{ role: 'user', content: 'x' }], tools: [{ type: 'image_generation' }] }
     });
     assert.equal(res.status, 200, res.text);
-    assert.equal(duck2.calls.chat[0].params.webSearch, false);
+    assert.equal(duck2.calls.chat[0].params.imageGeneration, false);
   });
 
   // 3) strict：服务端关闭 → 400 tool_disabled
@@ -503,7 +503,7 @@ test('工具校验：默认策略丢弃不可用工具；dropUnsupported=false �
     async ({ baseUrl }) => {
       const res = await v1Request(baseUrl, '/v1/chat/completions', {
         method: 'POST',
-        body: { model: 'mistral-small-2603', messages: [{ role: 'user', content: 'x' }], tools: [{ type: 'web_search' }] }
+        body: { model: 'claude-haiku-5-5', messages: [{ role: 'user', content: 'x' }], tools: [{ type: 'image_generation' }] }
       });
       assert.equal(res.status, 400);
       assert.equal(res.json.error.code, 'tool_not_supported');

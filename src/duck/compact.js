@@ -17,7 +17,6 @@ export const SUMMARY_PROMPT_VERSION = 1;
  * `claude-haiku-5-5` is internal-tier only (list `o`) — non-internal tiers do NOT auto-compact it.
  */
 export const COMPACTION_MODELS = Object.freeze([
-  'claude-haiku-4-5',
   'claude-haiku-5-5',
   'claude-sonnet-4-6',
   'claude-sonnet-5-5',

@@ -20,6 +20,7 @@ import { ApiError, apiDelete, apiGet, apiPatch, apiPost, authHeaders } from '@/a
 import { formatDateTime } from '@/app/lib/format';
 import type { ModelInfo } from '@/app/lib/types';
 import { EmptyState } from '@/app/components/empty-state';
+import { PageHeader } from '@/app/components/page-header';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -405,11 +406,11 @@ function FanThumb({ item, large }: { item: GalleryItem; large: boolean }) {
   return (
     <div
       className={cn(
-        'checker overflow-hidden rounded-2xl border border-border bg-card shadow-[0_12px_30px_-16px_rgb(28_25_23/0.55)]',
-        large ? 'h-48 w-36 sm:h-56 sm:w-40' : 'h-40 w-28 sm:h-44 sm:w-32'
+        'checker aspect-square w-full overflow-hidden bg-card',
+        large ? '' : ''
       )}
     >
-      {src ? <img src={src} alt={item.prompt} className="h-full w-full object-cover" /> : null}
+      {src ? <img src={src} alt={item.prompt} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" /> : null}
     </div>
   );
 }
@@ -417,7 +418,7 @@ function FanThumb({ item, large }: { item: GalleryItem; large: boolean }) {
 function MenuGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
+      <div className="mb-1.5 px-1 text-[12px] font-medium text-muted-foreground">{label}</div>
       <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
   );
@@ -478,7 +479,7 @@ interface Turn {
 /* 页面                                                                */
 /* ------------------------------------------------------------------ */
 
-export function ImagesPage() {
+export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' | 'gallery' } = {}) {
   // 生成参数
   const [prompt, setPrompt] = useState('');
   const [aspect, setAspect] = useState('auto');
@@ -493,7 +494,7 @@ export function ImagesPage() {
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [view, setView] = useState<'create' | 'gallery'>('create');
+  const [view, setView] = useState<'create' | 'gallery'>(initialView);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -729,9 +730,154 @@ export function ImagesPage() {
   const selectedModel = imageModels.find((entry) => entry.id === model);
   const hasTurns = turns.length > 0;
 
+  const composer = (
+    <div className={cn('z-20 w-full', hasTurns ? 'sticky bottom-4 pb-2' : '')}>
+      {dragging ? (
+        <div className="mb-2 rounded-xl border border-dashed border-[color:hsl(var(--brand))] bg-card py-3 text-center text-sm text-brand">
+          松手即可作为参考图
+        </div>
+      ) : null}
+      <div className="rounded-2xl border border-border bg-card px-3 pb-2.5 pt-3 shadow-lift transition-shadow focus-within:border-[color:hsl(var(--ring)/0.5)]">
+        {references.length ? (
+          <div className="mb-2 flex gap-2 px-1">
+            {references.map((src, index) => (
+              <div key={`${index}-${src.length}`} className="group relative h-14 w-14 overflow-hidden rounded-lg border border-border">
+                <img src={src} alt={`参考图 ${index + 1}`} className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  aria-label="移除参考图"
+                  onClick={() => setReferences((current) => current.filter((_, i) => i !== index))}
+                  className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div className="flex items-end gap-2">
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              aria-label="更多选项"
+              onClick={() => setMenuOpen((value) => !value)}
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground',
+                menuOpen && 'bg-muted text-foreground'
+              )}
+            >
+              <Plus className={cn('h-4 w-4 transition', menuOpen && 'rotate-45')} />
+            </button>
+            {menuOpen ? (
+              <div className="absolute bottom-12 left-0 z-30 w-[320px] space-y-4 rounded-xl border border-border bg-popover p-4 text-left shadow-lift">
+                <button
+                  type="button"
+                  onClick={() => {
+                    fileInput.current?.click();
+                    setMenuOpen(false);
+                  }}
+                  disabled={references.length >= MAX_REFERENCES}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm hover:bg-muted disabled:opacity-50"
+                >
+                  <Upload className="h-4 w-4" />
+                  上传参考图
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {references.length}/{MAX_REFERENCES}
+                  </span>
+                </button>
+                <MenuGroup label="画幅">
+                  {ASPECTS.map((entry) => (
+                    <Pill key={entry.value} active={aspect === entry.value} onClick={() => setAspect(entry.value)}>
+                      {entry.label}
+                    </Pill>
+                  ))}
+                </MenuGroup>
+                <MenuGroup label="张数">
+                  {[1, 2, 3, 4].map((value) => (
+                    <Pill key={value} active={count === value} onClick={() => setCount(value)}>
+                      {value}
+                    </Pill>
+                  ))}
+                </MenuGroup>
+                {imageModels.filter((entry) => entry.available !== false).length > 1 ? (
+                  <MenuGroup label="模型">
+                    {imageModels.filter((entry) => entry.available !== false).map((entry) => (
+                      <Pill
+                        key={entry.id}
+                        active={model === entry.id}
+                        disabled={entry.available === false}
+                        onClick={() => setModel(entry.id)}
+                      >
+                        {entry.display_name || entry.name || entry.id}
+                      </Pill>
+                    ))}
+                  </MenuGroup>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <Textarea
+            ref={textareaRef}
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+            onPaste={onPaste}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                void generate();
+              }
+            }}
+            rows={1}
+            maxLength={4000}
+            placeholder={references.length ? '说说要怎么改这张图' : '描述你想要的图片，或点 + 上传图片进行编辑'}
+            className="max-h-48 min-h-[36px] flex-1 resize-none !border-0 !bg-transparent px-1 py-1.5 text-[15px] leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+          {busy ? (
+            <button
+              type="button"
+              aria-label="停止"
+              onClick={() => abortRef.current?.abort()}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label="生成"
+              disabled={!prompt.trim()}
+              onClick={() => void generate()}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-soft transition hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <ArrowUp className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11 text-xs text-muted-foreground">
+          <span className="rounded-full bg-muted px-2.5 py-1 text-foreground">
+            {selectedModel?.display_name || selectedModel?.name || 'GPT Image'}
+          </span>
+          {aspect !== 'auto' ? <ParamChip onClear={() => setAspect('auto')}>{aspect}</ParamChip> : null}
+          {count > 1 ? <ParamChip onClear={() => setCount(1)}>{count} 张</ParamChip> : null}
+        </div>
+      </div>
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          if (event.target.files) void addReferenceFiles(event.target.files);
+          event.target.value = '';
+        }}
+      />
+    </div>
+  );
+
   return (
     <div
-      className="relative mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-3xl flex-col"
+      className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col"
       onDragOver={(event) => {
         event.preventDefault();
         setDragging(true);
@@ -741,27 +887,9 @@ export function ImagesPage() {
       }}
       onDrop={onDrop}
     >
-      {/* 顶部：极简标题 + 图库切换 */}
-      <div className="flex items-center justify-between pb-2">
-        <div className="eyebrow">Duck Image</div>
-        <div className="flex items-center gap-1 text-sm">
-          <button
-            type="button"
-            onClick={() => setView('create')}
-            className={cn('px-2 py-1 transition', view === 'create' ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground')}
-          >
-            创作
-          </button>
-          <span className="text-muted-foreground/50">/</span>
-          <button
-            type="button"
-            onClick={() => setView('gallery')}
-            className={cn('px-2 py-1 transition', view === 'gallery' ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground')}
-          >
-            图库{stats?.count ? ` ${stats.count}` : ''}
-          </button>
-        </div>
-      </div>
+      {view === 'gallery' ? (
+        <PageHeader title={`图库${stats?.count ? ` · ${stats.count}` : ''}`} />
+      ) : null}
 
       {view === 'gallery' ? (
         <div className="flex-1 pb-10">
@@ -877,174 +1005,33 @@ export function ImagesPage() {
               <div ref={feedEnd} />
             </div>
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center pb-10 pt-6 text-center">
-              <h1 className="slant text-[30px] font-bold leading-tight sm:text-[40px]">给你的下一幅画，留一个位置。</h1>
+            <div className="flex flex-1 flex-col items-center pt-[14vh] text-center">
+              <h1 className="text-[26px] font-semibold tracking-tight">想画点什么？</h1>
+              <div className="mt-6 w-full text-left">{composer}</div>
               {items.length ? (
-                <div className="mt-10 flex items-center justify-center">
-                  {items.slice(0, 5).map((item, index, list) => {
-                    const mid = (list.length - 1) / 2;
-                    const offset = index - mid;
-                    return (
+                <div className="mt-10 w-full text-left">
+                  <div className="mb-3 flex items-center justify-between text-[13px] text-muted-foreground">
+                    <span>最近作品</span>
+                    <a href="#/gallery" className="transition-colors hover:text-foreground">查看全部</a>
+                  </div>
+                  <div className="grid grid-cols-6 gap-3">
+                    {items.slice(0, 6).map((item) => (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => setLightbox(item)}
-                        className="relative -mx-3 transition hover:z-20 hover:-translate-y-2"
-                        style={{ transform: `rotate(${offset * 5}deg) translateY(${Math.abs(offset) * 10}px)`, zIndex: 10 - Math.abs(offset) }}
+                        className="group overflow-hidden rounded-xl ring-1 ring-border transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
                       >
-                        <FanThumb item={item} large={offset === 0} />
+                        <FanThumb item={item} large={false} />
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               ) : null}
-              <p className="mt-10 text-sm text-muted-foreground">写一句话描述画面；点 + 可以上传参考图、换画幅。</p>
             </div>
           )}
 
-          {/* 输入框 */}
-          <div className="sticky bottom-4 z-20 pb-2">
-            {dragging ? (
-              <div className="mb-2 rounded-xl border border-dashed border-[color:hsl(var(--brand))] bg-card py-3 text-center text-sm text-brand">
-                松手即可作为参考图
-              </div>
-            ) : null}
-            <div className="rounded-2xl border border-[color:hsl(var(--input))] bg-card px-3 pb-2.5 pt-3 shadow-[0_10px_30px_-18px_rgb(28_25_23/0.45)]">
-              {references.length ? (
-                <div className="mb-2 flex gap-2 px-1">
-                  {references.map((src, index) => (
-                    <div key={`${index}-${src.length}`} className="group relative h-14 w-14 overflow-hidden rounded-lg border border-border">
-                      <img src={src} alt={`参考图 ${index + 1}`} className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        aria-label="移除参考图"
-                        onClick={() => setReferences((current) => current.filter((_, i) => i !== index))}
-                        className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
-                      >
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              <div className="flex items-end gap-2">
-                <div className="relative" ref={menuRef}>
-                  <button
-                    type="button"
-                    aria-label="更多选项"
-                    onClick={() => setMenuOpen((value) => !value)}
-                    className={cn(
-                      'flex h-9 w-9 items-center justify-center rounded-full border border-[color:hsl(var(--input))] text-muted-foreground transition hover:text-foreground',
-                      menuOpen && 'bg-muted text-foreground'
-                    )}
-                  >
-                    <Plus className={cn('h-4 w-4 transition', menuOpen && 'rotate-45')} />
-                  </button>
-                  {menuOpen ? (
-                    <div className="absolute bottom-12 left-0 z-30 w-[320px] space-y-4 rounded-xl border border-border bg-popover p-4 text-left shadow-[0_16px_40px_-16px_rgb(28_25_23/0.5)]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          fileInput.current?.click();
-                          setMenuOpen(false);
-                        }}
-                        disabled={references.length >= MAX_REFERENCES}
-                        className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm hover:bg-muted disabled:opacity-50"
-                      >
-                        <Upload className="h-4 w-4" />
-                        上传参考图
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {references.length}/{MAX_REFERENCES}
-                        </span>
-                      </button>
-                      <MenuGroup label="画幅">
-                        {ASPECTS.map((entry) => (
-                          <Pill key={entry.value} active={aspect === entry.value} onClick={() => setAspect(entry.value)}>
-                            {entry.label}
-                          </Pill>
-                        ))}
-                      </MenuGroup>
-                      <MenuGroup label="张数">
-                        {[1, 2, 3, 4].map((value) => (
-                          <Pill key={value} active={count === value} onClick={() => setCount(value)}>
-                            {value}
-                          </Pill>
-                        ))}
-                      </MenuGroup>
-                      {imageModels.filter((entry) => entry.available !== false).length > 1 ? (
-                        <MenuGroup label="模型">
-                          {imageModels.filter((entry) => entry.available !== false).map((entry) => (
-                            <Pill
-                              key={entry.id}
-                              active={model === entry.id}
-                              disabled={entry.available === false}
-                              onClick={() => setModel(entry.id)}
-                            >
-                              {entry.display_name || entry.name || entry.id}
-                            </Pill>
-                          ))}
-                        </MenuGroup>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-                <Textarea
-                  ref={textareaRef}
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  onPaste={onPaste}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                      event.preventDefault();
-                      void generate();
-                    }
-                  }}
-                  rows={1}
-                  maxLength={4000}
-                  placeholder={references.length ? '说说要怎么改这张图' : '描述你想要的图片，或点 + 上传图片进行编辑'}
-                  className="max-h-48 min-h-[36px] flex-1 resize-none !border-0 !bg-transparent px-1 py-1.5 text-[15px] leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                {busy ? (
-                  <button
-                    type="button"
-                    aria-label="停止"
-                    onClick={() => abortRef.current?.abort()}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background"
-                  >
-                    <Square className="h-3.5 w-3.5 fill-current" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    aria-label="生成"
-                    disabled={!prompt.trim()}
-                    onClick={() => void generate()}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition disabled:opacity-30"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11 text-xs text-muted-foreground">
-                <span className="rounded-full bg-muted px-2.5 py-1 text-foreground">
-                  {selectedModel?.display_name || selectedModel?.name || 'GPT Image'}
-                </span>
-                {aspect !== 'auto' ? <ParamChip onClear={() => setAspect('auto')}>{aspect}</ParamChip> : null}
-                {count > 1 ? <ParamChip onClear={() => setCount(1)}>{count} 张</ParamChip> : null}
-              </div>
-            </div>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                if (event.target.files) void addReferenceFiles(event.target.files);
-                event.target.value = '';
-              }}
-            />
-          </div>
+          {hasTurns ? composer : null}
         </div>
       )}
 

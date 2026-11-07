@@ -13,8 +13,9 @@
 //   supportedTools           string[]                    — upstream tool names (WebSearch / GenerateImage / …)
 //   displayName              string                       — human readable name
 //
-// Free (anonymous) models — ADMIN_API_V2 §4: gpt-6-luna, gpt-5.4-mini, claude-haiku-4-5,
-// mistral-small-2603, tinfoil/gpt-oss-120b, tinfoil/gemma4-31b.
+// Free (anonymous) models: gpt-6-luna, gpt-5.4-mini, claude-haiku-5-5.
+// (v0.5.0: claude-haiku-4-5 → claude-haiku-5-5; mistral-small-2603 / tinfoil/* removed upstream,
+//  old ids are kept as aliases in MODEL_ALIASES.)
 // Paid (Plus/Pro) models: gpt-5.6-terra, gpt-5.6-sol, claude-sonnet-5-5, claude-opus-5-5.
 
 const FREE_TIER = Object.freeze({ tier: 'free', paid: false, available: true, requires_subscription: false });
@@ -55,11 +56,11 @@ export const DUCK_MODELS = [
     costRank: 5
   },
   {
-    model: 'claude-haiku-4-5',
+    model: 'claude-haiku-5-5',
     modelName: 'Claude',
-    modelVariant: 'Haiku 4.5',
-    displayName: 'Claude Haiku 4.5',
-    shortName: 'Haiku 4.5',
+    modelVariant: 'Haiku 5.5',
+    displayName: 'Claude Haiku 5.5',
+    shortName: 'Haiku 5.5',
     createdBy: 'Anthropic',
     modelType: 'reasoning',
     ...FREE_TIER,
@@ -69,59 +70,6 @@ export const DUCK_MODELS = [
     supportedTools: ['WebSearch', 'RelatedSearchTerms', 'FindInDocument', 'ReadDocument', 'ReadDocumentSelection', 'LocationPrompt'],
     tiers: ['free', 'plus', 'pro'],
     costRank: 7
-  },
-  {
-    model: 'mistral-small-2603',
-    modelName: 'Mistral',
-    modelVariant: 'Small 4',
-    displayName: 'Mistral Small 4',
-    shortName: 'Mistral',
-    createdBy: 'Mistral AI',
-    modelType: 'general',
-    ...FREE_TIER,
-    reasoningEfforts: [],
-    supportedReasoningEfforts: [],
-    tools: [],
-    supportedTools: [],
-    tiers: ['free', 'plus', 'pro'],
-    isOpenSource: true,
-    costRank: 3
-  },
-  {
-    model: 'tinfoil/gpt-oss-120b',
-    modelName: 'gpt-oss',
-    modelVariant: '120B',
-    displayName: 'gpt-oss 120B',
-    shortName: 'gpt-oss',
-    createdBy: 'OpenAI',
-    modelType: 'reasoning',
-    ...FREE_TIER,
-    reasoningEfforts: ['low'],
-    supportedReasoningEfforts: ['low'],
-    tools: ['web_search'],
-    supportedTools: ['WebSearch', 'LocationPrompt', 'FindInDocument', 'ReadDocument', 'ReadDocumentSelection'],
-    tiers: ['free', 'plus', 'pro'],
-    isOpenSource: true,
-    isEncrypted: true,
-    costRank: 6
-  },
-  {
-    model: 'tinfoil/gemma4-31b',
-    modelName: 'Gemma 4',
-    modelVariant: '31B',
-    displayName: 'Gemma 4 31B',
-    shortName: 'Gemma',
-    createdBy: 'Google',
-    modelType: 'reasoning',
-    ...FREE_TIER,
-    reasoningEfforts: ['none', 'low'],
-    supportedReasoningEfforts: ['none', 'low'],
-    tools: ['web_search'],
-    supportedTools: ['WebSearch', 'LocationPrompt', 'FindInDocument', 'ReadDocument', 'ReadDocumentSelection'],
-    tiers: ['free', 'plus', 'pro'],
-    isOpenSource: true,
-    isEncrypted: true,
-    costRank: 4
   },
   {
     model: 'gpt-5.6-terra',
@@ -245,7 +193,12 @@ export const DEFAULT_MODEL = 'gpt-6-luna';
 export const MODEL_ALIASES = {
   'gpt-6': 'gpt-6-luna',
   gpt6: 'gpt-6-luna',
-  duck: 'gpt-6-luna'
+  duck: 'gpt-6-luna',
+  // v0.5.0：上游下线 / 更名的旧 id
+  'claude-haiku-4-5': 'claude-haiku-5-5',
+  'mistral-small-2603': 'gpt-6-luna',
+  'tinfoil/gpt-oss-120b': 'gpt-6-luna',
+  'tinfoil/gemma4-31b': 'gpt-6-luna'
 };
 
 /** Free (anonymous) models exposed by the gateway catalog. */

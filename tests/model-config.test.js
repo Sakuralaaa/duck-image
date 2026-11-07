@@ -16,7 +16,7 @@ test('GET /admin/api/models/config：返回每个模型的默认值/覆盖/生�
     const res = await adminRequest(baseUrl, '/models/config');
     assert.equal(res.status, 200);
     assert.equal(res.json.object, 'model_config');
-    assert.ok(Array.isArray(res.json.items) && res.json.items.length >= 10);
+    assert.ok(Array.isArray(res.json.items) && res.json.items.length >= 7);
     const luna = res.json.items.find((item) => item.id === 'gpt-6-luna');
     assert.ok(luna);
     assert.equal(luna.defaults.context_window_chars, 20000);
@@ -112,10 +112,10 @@ test('GET /admin/api/models/config：返回每模型 tools（仅 supported 可�
         ['image_generation', true, true]
       ]
     );
-    // mistral 不支持任何工具 → UI 不显示开关
-    const mistral = res.json.items.find((item) => item.id === 'mistral-small-2603');
-    assert.equal(mistral.tools.filter((tool) => tool.supported).length, 0);
-    assert.deepEqual(mistral.tools_supported, []);
+    // claude-haiku-5-5 只支持联网搜索 → 图片生成不显示开关
+    const haiku = res.json.items.find((item) => item.id === 'claude-haiku-5-5');
+    assert.equal(haiku.tools.filter((tool) => tool.supported).length, 1);
+    assert.deepEqual(haiku.tools_supported, ['web_search']);
   });
 });
 
@@ -171,10 +171,10 @@ test('PUT /admin/api/models/config：dropUnsupported（静默清理）开关持�
 
 test('PUT /admin/api/models/config：不支持的工具/未知模型/非布尔 → 400', async () => {
   await withServer({}, async ({ baseUrl }) => {
-    // mistral 不支持任何工具 → 不允许开启
+    // claude-haiku-5-5 不支持图片生成 → 不允许开启
     const unsupported = await adminRequest(baseUrl, '/models/config', {
       method: 'PUT',
-      body: { tools: { perModel: { 'mistral-small-2603': { web_search: true } } } }
+      body: { tools: { perModel: { 'claude-haiku-5-5': { image_generation: true } } } }
     });
     assert.equal(unsupported.status, 400);
     assert.equal(unsupported.json.error.code, 'invalid_model_override');
@@ -205,7 +205,7 @@ test('POST /admin/api/models/refresh：返回静态目录来源与上游能力�
     assert.equal(res.status, 200, res.text);
     assert.equal(res.json.catalogSource, 'static');
     assert.match(String(res.json.catalogNote || ''), /静态|static/);
-    assert.ok(res.json.modelCount >= 10);
+    assert.ok(res.json.modelCount >= 7);
     assert.equal(typeof res.json.probedAt, 'number');
     assert.equal(res.json.ok, true);
   });

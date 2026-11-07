@@ -290,7 +290,9 @@ test('身份池：删除在 slots 的身份 → 409 弹窗两操作；force 请�
     const rows = [...env.window.document.querySelectorAll('tr')];
     const row = rows.find((item) => (item.textContent || '').includes('DuckCPA@b2c4'));
     assert.ok(row, '应找到分身1行');
-    const deleteButton = [...row.querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === '删除');
+    // v0.5：行操作收进「…」菜单
+    env.click(row.querySelector('button[aria-label="更多操作"]'));
+    const deleteButton = await env.waitFor(() => [...row.querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === '删除'), { label: '删除菜单项' });
     env.click(deleteButton);
     await env.waitForText('删除身份「分身1」？');
     env.clickText('删除'); // 确认删除 → 后端 409

@@ -32,7 +32,7 @@ export function ConsoleLayout({
         : 'bg-destructive';
 
   return (
-    <div className="topline flex min-h-screen">
+    <div className="flex min-h-screen">
       <Sidebar
         route={route}
         mobileOpen={mobileOpen}
@@ -40,7 +40,7 @@ export function ConsoleLayout({
         onLogout={onLogout}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[color:var(--rule)] bg-[hsl(var(--background))] px-4 pb-2.5 pt-3.5 lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur lg:hidden">
           <Button variant="ghost" size="icon" aria-label="打开菜单" onClick={() => setMobileOpen(true)}>
             <Menu className="h-4 w-4" />
           </Button>
@@ -50,12 +50,9 @@ export function ConsoleLayout({
             {upstream?.rateLimited ? '限流' : upstream?.ok ? '在线' : data ? '异常' : '连接中'}
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+        <main className="mx-auto w-full max-w-[1080px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
           {children}
         </main>
-        <footer className="px-4 pb-6 text-center text-[11px] text-muted-foreground sm:px-6 lg:px-8">
-          Duck Image v{data?.service?.version ?? '—'} · 仅供学习与私有部署 · 遵守 duck.ai 服务条款
-        </footer>
       </div>
     </div>
   );

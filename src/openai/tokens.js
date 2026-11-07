@@ -16,10 +16,7 @@ export const MODEL_CONTEXT_TOKENS = Object.freeze({
   'claude-opus-5-5': 200_000,
   'claude-sonnet-4-6': 200_000,
   'claude-opus-4-8': 200_000,
-  'claude-haiku-4-5': 200_000,
-  'mistral-small-2603': 128_000,
-  'tinfoil/gpt-oss-120b': 128_000,
-  'tinfoil/gemma4-31b': 128_000
+  'claude-haiku-5-5': 200_000
 });
 
 export const DEFAULT_CONTEXT_TOKENS = 128_000;

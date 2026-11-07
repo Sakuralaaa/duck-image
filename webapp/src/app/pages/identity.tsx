@@ -287,7 +287,7 @@ function ValueRow({
   );
 }
 
-export function IdentityPage() {
+export function IdentityPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { refresh: refreshOverview } = useOverview();
 
   const [identity, setIdentity] = useState<IdentityState | null>(null);
@@ -1244,10 +1244,7 @@ export function IdentityPage() {
 
   return (
     <div>
-      <PageHeader
-        title="默认身份"
-        description="默认匿名身份（journeyId + 本机指纹）与 DuckDuckGo Sync & Backup；订阅已移到独立「订阅」页"
-      />
+      {embedded ? null : <PageHeader title="默认身份" />}
 
       {error ? <ErrorBanner message={error} onRetry={() => void load()} /> : null}
 
@@ -1426,7 +1423,7 @@ export function IdentityPage() {
                 <CloudOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
                   当前环境无法访问 duckduckgo.com；可在
-                  <a href="#/proxy" className="mx-0.5 font-medium underline underline-offset-2">
+                  <a href="#/settings" className="mx-0.5 font-medium underline underline-offset-2">
                     「代理」页
                   </a>
                   启用代理后重试

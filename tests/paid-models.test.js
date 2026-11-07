@@ -18,10 +18,7 @@ import { MockDuckClient } from './helpers/mock-duck.js';
 const FREE_MODELS = [
   'gpt-6-luna',
   'gpt-5.4-mini',
-  'claude-haiku-4-5',
-  'mistral-small-2603',
-  'tinfoil/gpt-oss-120b',
-  'tinfoil/gemma4-31b'
+  'claude-haiku-5-5'
 ];
 const PAID_MODELS = ['gpt-5.6-terra', 'gpt-5.6-sol', 'claude-sonnet-5-5', 'claude-opus-5-5'];
 
@@ -40,7 +37,7 @@ test('/v1/models：免费/付费字段齐全且分类正确（默认 allowPaidMo
     assert.equal(res.status, 200);
     assert.equal(res.json.object, 'list');
     const models = res.json.data;
-    assert.ok(Array.isArray(models) && models.length >= 10);
+    assert.ok(Array.isArray(models) && models.length >= 7);
 
     // 每项字段齐全
     for (const model of models) {

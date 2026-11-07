@@ -201,7 +201,11 @@ test('v2.15 身份池：订阅列 + 绑定订阅弹窗使用 Select', async () =
     await env.waitFor(() => env.text().includes('我的 Plus') && env.text().includes('DuckAI@main'), '身份池与订阅列渲染');
     const text = env.text();
     assert.match(text, /我的 Plus/, '订阅列应显示订阅名称');
-    assert.match(text, /未绑定/, '未绑定身份应显示「未绑定」');
+    // v0.5：行操作收进「…」菜单；未绑定的行不再显示「未绑定」字样
+    const unbound = [...env.window.document.querySelectorAll('tr')].find((row) => !(row.textContent || '').includes('我的 Plus') && row.querySelector('button[aria-label="更多操作"]'));
+    assert.ok(unbound, '应有未绑定订阅的身份行');
+    unbound.querySelector('button[aria-label="更多操作"]').dispatchEvent(new env.window.MouseEvent('click', { bubbles: true }));
+    await env.waitFor(() => env.window.document.querySelector('button[aria-label="绑定订阅"]'), '绑定订阅菜单项');
     const bindButtons = [...env.window.document.querySelectorAll('button[aria-label="绑定订阅"]')];
     assert.ok(bindButtons.length >= 1, '应有「绑定订阅」按钮');
     bindButtons[0].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true }));

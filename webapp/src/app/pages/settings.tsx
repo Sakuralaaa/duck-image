@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Save } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, ApiError } from '@/app/lib/api';
-import { formatDateTime } from '@/app/lib/format';
 import type { Config, ConfigResponse, UpdateConfigResponse } from '@/app/lib/types';
 import { PageHeader } from '@/app/components/page-header';
 import { ErrorBanner } from '@/app/components/error-banner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProxySection } from '@/app/components/proxy-section';
+import { SettingRow, SettingsCard } from '@/app/components/setting-row';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -18,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -198,6 +195,8 @@ export function SettingsPage() {
   const [notice, setNotice] = useState<{ tone: 'success' | 'warning'; text: string } | null>(null);
   const [loadedAt, setLoadedAt] = useState<number | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [savedForm, setSavedForm] = useState<FormState>(DEFAULT_FORM);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -206,6 +205,7 @@ export function SettingsPage() {
       const response = await apiGet<ConfigResponse>('/config');
       const config = response?.config ?? {};
       setForm(formFromConfig(config));
+      setSavedForm(formFromConfig(config));
       setLoadedAt(Date.now());
       setFieldErrors({});
     } catch (err) {
@@ -223,8 +223,8 @@ export function SettingsPage() {
   const patch = (values: Partial<FormState>) => setForm((current) => ({ ...current, ...values }));
 
   /** 按卡片保存：只提交该卡片负责的配置段。 */
-  const saveCard = async (card: 'queue' | 'prompts' | 'tools' | 'logging') => {
-    const errors = validate(form);
+  const saveCard = async (card: 'queue' | 'prompts' | 'tools' | 'logging', f: FormState = form) => {
+    const errors = validate(f);
     setFieldErrors(errors);
     if (errors.rps || errors.maxConcurrent || errors.queueLimit || errors.queueTimeoutMs) {
       if (card === 'queue') {
@@ -240,54 +240,55 @@ export function SettingsPage() {
         card === 'queue'
           ? {
               upstream: {
-                rps: Number(form.rps),
-                maxConcurrent: Number(form.maxConcurrent),
-                queueLimit: Number(form.queueLimit),
-                queueTimeoutMs: Number(form.queueTimeoutMs)
+                rps: Number(f.rps),
+                maxConcurrent: Number(f.maxConcurrent),
+                queueLimit: Number(f.queueLimit),
+                queueTimeoutMs: Number(f.queueTimeoutMs)
               }
             }
           : card === 'prompts'
             ? {
                 prompts: {
-                  defaultSystemPrompt: form.systemPrompt,
-                  mode: form.promptMode,
-                  source: form.promptSource,
-                  duckai: form.duckai
+                  defaultSystemPrompt: f.systemPrompt,
+                  mode: f.promptMode,
+                  source: f.promptSource,
+                  duckai: f.duckai
                 }
               }
             : card === 'tools'
               ? {
                   tools: {
-                    webSearch: form.webSearch,
-                    imageGeneration: form.imageGeneration,
-                    location: form.location,
-                    clientFunctionCalling: { enabled: form.clientFunctionCalling }
+                    webSearch: f.webSearch,
+                    imageGeneration: f.imageGeneration,
+                    location: f.location,
+                    clientFunctionCalling: { enabled: f.clientFunctionCalling }
                   },
                   images: {
-                    saveGallery: form.saveGallery,
-                    retentionDays: Math.max(0, Math.trunc(Number(form.galleryRetentionDays) || 0)),
-                    maxItems: Math.max(0, Math.trunc(Number(form.galleryMaxItems) || 0))
+                    saveGallery: f.saveGallery,
+                    retentionDays: Math.max(0, Math.trunc(Number(f.galleryRetentionDays) || 0)),
+                    maxItems: Math.max(0, Math.trunc(Number(f.galleryMaxItems) || 0))
                   }
                 }
-              : { logging: { level: form.logLevel } };
+              : { logging: { level: f.logLevel } };
       const response = await apiPut<UpdateConfigResponse>('/config', body);
-      if (response?.config) setForm(formFromConfig(response.config));
+      if (response?.config) {
+        setForm(formFromConfig(response.config));
+        setSavedForm(formFromConfig(response.config));
+      }
       setLoadedAt(Date.now());
       const ignored = response?.ignored ?? [];
       const label = CARD_LABELS[card];
       if (response?.restartRequired) {
-        setNotice({ tone: 'warning', text: `${label}已保存，但部分改动需要重启服务后生效。` });
         toast.warning(`${label}已保存，部分改动需重启生效`);
       } else {
-        toast.success(`${label}已保存并实时生效`);
+        toast.success('已保存');
       }
       if (ignored.length > 0) {
         toast.warning(`以下字段被忽略：${ignored.join('、')}`, { duration: 6000 });
       }
     } catch (err) {
       if ((err as ApiError)?.handled) return;
-      setError((err as Error)?.message || '保存配置失败');
-      toast.error('保存配置失败');
+      toast.error((err as Error)?.message || '保存失败');
     } finally {
       setSavingCard(null);
       setSaving(false);
@@ -358,445 +359,225 @@ export function SettingsPage() {
   const patchDuckai = (values: Partial<FormState['duckai']>) =>
     setForm((current) => ({ ...current, duckai: { ...current.duckai, ...values } }));
 
-  return (
-    <div>
-      <PageHeader
-        title="设置"
-        description="队列、提示词、工具与日志配置（保存后实时生效；默认模型/超时/付费模型已移到「模型配置」页）"
-      />
+  /** 开关类：改动即保存。 */
+  const toggleTools = (values: Partial<FormState>) => {
+    const next = { ...form, ...values };
+    setForm(next);
+    void saveCard('tools', next);
+  };
 
-      {error ? <ErrorBanner message={error} onRetry={() => void load()} /> : null}
-      {notice ? (
-        <div
-          className={
-            notice.tone === 'warning'
-              ? 'mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300'
-              : 'mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300'
-          }
-        >
-          {notice.tone === 'warning' ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-          {notice.text}
-        </div>
-      ) : null}
+  const numberCommit = (key: 'galleryRetentionDays' | 'galleryMaxItems') => () => {
+    if (form[key] === savedForm[key]) return;
+    void saveCard('tools');
+  };
 
-      {loading ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-56 rounded-xl" />
+  const selectRow = (
+    label: string,
+    value: string,
+    onChange: (value: string) => void,
+    options: Array<{ value: string; label: string }>,
+    testId?: string,
+    width = 'w-56'
+  ) => (
+    <SettingRow label={label}>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className={`h-9 ${width}`} data-testid={testId}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+    </SettingRow>
+  );
+
+  const ids = (list: Array<{ id: string }> | undefined, fallback: string[]) =>
+    (list?.length ? list.map((item) => item.id) : fallback).map((id) => ({ value: id, label: id === 'Default' ? '默认' : id }));
+
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-[720px]">
+        <PageHeader title="设置" />
+        <div className="space-y-6">
+          <Skeleton className="h-52 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
         </div>
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-sm">上游请求队列（RPS）</CardTitle>
-              <CardDescription className="text-xs">
-                所有上游调用统一 FIFO 排队；默认 rps=1 表示同时只执行 1 个请求，其余排队。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="settings-rps">每秒请求数 rps</Label>
-                  <Input
-                    id="settings-rps"
-                    type="number"
-                    min={0.2}
-                    max={20}
-                    step={0.1}
-                    value={form.rps}
-                    onChange={(event) => patch({ rps: event.target.value })}
-                  />
-                  {fieldErrors.rps ? <p className="text-xs text-destructive">{fieldErrors.rps}</p> : null}
-                  <p className="text-[11px] text-muted-foreground">0.2 – 20，step 0.1，默认 1</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="settings-max-concurrent">同时执行上限 maxConcurrent</Label>
-                  <Input
-                    id="settings-max-concurrent"
-                    type="number"
-                    min={1}
-                    max={10}
-                    step={1}
-                    value={form.maxConcurrent}
-                    onChange={(event) => patch({ maxConcurrent: event.target.value })}
-                  />
-                  {fieldErrors.maxConcurrent ? (
-                    <p className="text-xs text-destructive">{fieldErrors.maxConcurrent}</p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">1 – 10，默认 1</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="settings-queue-limit">队列上限 queueLimit</Label>
-                  <Input
-                    id="settings-queue-limit"
-                    type="number"
-                    min={1}
-                    max={1000}
-                    step={1}
-                    value={form.queueLimit}
-                    onChange={(event) => patch({ queueLimit: event.target.value })}
-                  />
-                  {fieldErrors.queueLimit ? (
-                    <p className="text-xs text-destructive">{fieldErrors.queueLimit}</p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">1 – 1000，超出后新请求返回 429 queue_full</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="settings-queue-timeout">排队超时 queueTimeoutMs</Label>
-                  <Input
-                    id="settings-queue-timeout"
-                    type="number"
-                    min={1000}
-                    max={3600000}
-                    step={1000}
-                    value={form.queueTimeoutMs}
-                    onChange={(event) => patch({ queueTimeoutMs: event.target.value })}
-                  />
-                  {fieldErrors.queueTimeoutMs ? (
-                    <p className="text-xs text-destructive">{fieldErrors.queueTimeoutMs}</p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">毫秒，默认 300000（5 分钟）</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end pt-0">
-              <Button size="sm" onClick={() => void saveCard('queue')} disabled={loading || saving} data-testid="settings-save-queue">
-                {savingFor('queue') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                保存队列配置
-              </Button>
-            </CardFooter>
-          </Card>
+      </div>
+    );
+  }
 
-          <Card className="lg:col-span-2" data-testid="settings-prompts-card">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-sm">提示词 prompts</CardTitle>
-              <CardDescription className="text-xs">
-                按 duck.ai 源码逻辑生成默认提示词，或使用完全自定义的系统提示词。匿名 duck.ai 不接受 system 角色，
-                默认用 inline（以「[系统指令] …」并入首条用户消息）注入。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 lg:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>提示词来源 prompts.source</Label>
-                  <Select
-                    value={form.promptSource}
-                    onValueChange={(value) => patch({ promptSource: value as FormState['promptSource'] })}
-                  >
-                    <SelectTrigger data-testid="settings-prompt-source">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="duckai">duck.ai 默认（源码生成器）</SelectItem>
-                      <SelectItem value="custom">自定义系统提示词</SelectItem>
-                      <SelectItem value="none">不注入</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">
-                    duck.ai 本身默认不注入系统提示词；这里的生成器按源码「Customize responses」规则拼装。
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>注入方式 prompts.mode</Label>
-                  <Select
-                    value={form.promptMode}
-                    onValueChange={(value) => patch({ promptMode: value as 'inline' | 'system' })}
-                  >
-                    <SelectTrigger data-testid="settings-prompt-mode">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="inline">inline（推荐，合并进首条用户消息）</SelectItem>
-                      <SelectItem value="system">system（前置 system 消息，上游可能 400）</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">inline 会以「[系统指令] …」前缀写入首条 user 消息，兼容性最好。</p>
-                </div>
-              </div>
+  return (
+    <div className="mx-auto w-full max-w-[720px]">
+      <PageHeader title="设置" />
+      {error ? <ErrorBanner message={error} onRetry={() => void load()} /> : null}
 
-              {form.promptSource === 'duckai' ? (
-                <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-                  <div className="text-xs font-medium">duck.ai 默认提示词生成器（源码逻辑）</div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="space-y-1.5">
-                      <Label>语气 tone</Label>
-                      <Select value={form.duckai.tone} onValueChange={(value) => patchDuckai({ tone: value })}>
-                        <SelectTrigger data-testid="settings-duckai-tone">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(promptOptions?.tones || [{ id: 'Default' }, { id: 'Casual' }, { id: 'Professional' }]).map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>长度 length</Label>
-                      <Select value={form.duckai.length} onValueChange={(value) => patchDuckai({ length: value })}>
-                        <SelectTrigger data-testid="settings-duckai-length">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(promptOptions?.lengths || [{ id: 'Default' }, { id: 'Short' }, { id: 'Shortest' }]).map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>AI 角色 assistantRole</Label>
-                      <Select value={form.duckai.assistantRole} onValueChange={(value) => patchDuckai({ assistantRole: value })}>
-                        <SelectTrigger data-testid="settings-duckai-assistant-role">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ASSISTANT_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>你的角色 userRole</Label>
-                      <Select value={form.duckai.userRole} onValueChange={(value) => patchDuckai({ userRole: value })}>
-                        <SelectTrigger data-testid="settings-duckai-user-role">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {USER_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="settings-duckai-user-name">你的昵称</Label>
-                      <Input
-                        id="settings-duckai-user-name"
-                        value={form.duckai.userName}
-                        onChange={(event) => patchDuckai({ userName: event.target.value })}
-                        placeholder="例如：小许（可留空）"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="settings-duckai-assistant-name">AI 昵称</Label>
-                      <Input
-                        id="settings-duckai-assistant-name"
-                        value={form.duckai.assistantName}
-                        onChange={(event) => patchDuckai({ assistantName: event.target.value })}
-                        placeholder="例如：Ducky（可留空）"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <Label htmlFor="settings-duckai-clarify">先反问澄清 shouldSeekClarity</Label>
-                      <p className="text-[11px] text-muted-foreground">
-                        开启后要求模型在信息不足时先提问（对应 duck.ai 的「Ask clarifying questions」）。
-                      </p>
-                    </div>
-                    <Switch
-                      id="settings-duckai-clarify"
-                      checked={form.duckai.shouldSeekClarity}
-                      onCheckedChange={(checked) => patchDuckai({ shouldSeekClarity: checked })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="settings-duckai-additional">附加指令 additionalInstructions</Label>
-                    <Textarea
-                      id="settings-duckai-additional"
-                      rows={3}
-                      value={form.duckai.additionalInstructions}
-                      onChange={(event) => patchDuckai({ additionalInstructions: event.target.value })}
-                      placeholder="例如：回答尽量使用中文，并给出可执行的步骤。"
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {form.promptSource === 'custom' ? (
-                <div className="space-y-1.5">
-                  <Label htmlFor="settings-system-prompt">自定义系统提示词 defaultSystemPrompt</Label>
-                  <Textarea
-                    id="settings-system-prompt"
-                    data-testid="settings-system-prompt"
-                    rows={6}
-                    value={form.systemPrompt}
-                    placeholder="例如：你是一个严谨的中文技术助手，回答尽量简洁。"
-                    onChange={(event) => patch({ systemPrompt: event.target.value })}
-                  />
-                  <p className="text-[11px] text-muted-foreground">留空表示不注入。</p>
-                </div>
-              ) : null}
-
-              <div className="space-y-1.5">
-                <Label>最终注入的提示词预览（服务端按源码同款逻辑生成）</Label>
-                <pre
-                  className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-2 text-[11px]"
-                  data-testid="settings-prompt-preview"
-                >
-                  {promptPreviewError ? `预览失败：${promptPreviewError}` : promptPreview || '（空：不会注入任何提示词）'}
-                </pre>
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end pt-0">
-              <Button size="sm" onClick={() => void saveCard('prompts')} disabled={loading || saving} data-testid="settings-save-prompts">
-                {savingFor('prompts') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                保存提示词配置
-              </Button>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-sm">工具</CardTitle>
-              <CardDescription className="text-xs">允许客户端请求联网搜索 / 图片生成</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Label htmlFor="settings-tool-web">联网搜索 tools.webSearch</Label>
-                  <p className="text-[11px] text-muted-foreground">禁用后 tools:[web_search] 返回 400 tool_disabled</p>
-                </div>
-                <Switch
-                  id="settings-tool-web"
-                  checked={form.webSearch}
-                  onCheckedChange={(checked) => patch({ webSearch: checked })}
+      <div className="space-y-8">
+        <SettingsCard title="功能">
+          <SettingRow label="联网搜索" htmlFor="settings-tool-web">
+            <Switch id="settings-tool-web" checked={form.webSearch} onCheckedChange={(value) => toggleTools({ webSearch: value })} disabled={saving} />
+          </SettingRow>
+          <SettingRow label="图片生成" htmlFor="settings-tool-image">
+            <Switch id="settings-tool-image" checked={form.imageGeneration} onCheckedChange={(value) => toggleTools({ imageGeneration: value })} disabled={saving} />
+          </SettingRow>
+          <SettingRow label="保存到图库" htmlFor="settings-gallery-save">
+            <Switch id="settings-gallery-save" checked={form.saveGallery} onCheckedChange={(value) => toggleTools({ saveGallery: value })} disabled={saving} />
+          </SettingRow>
+          {form.saveGallery ? (
+            <>
+              <SettingRow label="保留天数" htmlFor="settings-gallery-days" className="[&>div]:relative">
+                <Input
+                  id="settings-gallery-days"
+                  type="number"
+                  min={0}
+                  value={form.galleryRetentionDays}
+                  onChange={(event) => patch({ galleryRetentionDays: event.target.value })}
+                  onBlur={numberCommit('galleryRetentionDays')}
+                  onKeyDown={(event) => event.key === 'Enter' && (event.target as HTMLInputElement).blur()}
+                  className="h-9 w-32 pr-11 text-right tnum"
                 />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Label htmlFor="settings-tool-image">图片生成 tools.imageGeneration</Label>
-                  <p className="text-[11px] text-muted-foreground">禁用后图片生成接口与工具返回 400 tool_disabled</p>
-                </div>
-                <Switch
-                  id="settings-tool-image"
-                  checked={form.imageGeneration}
-                  onCheckedChange={(checked) => patch({ imageGeneration: checked })}
+                <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">{Number(form.galleryRetentionDays) ? '天' : '永久'}</span>
+              </SettingRow>
+              <SettingRow label="最多张数" htmlFor="settings-gallery-max" className="[&>div]:relative">
+                <Input
+                  id="settings-gallery-max"
+                  type="number"
+                  min={0}
+                  value={form.galleryMaxItems}
+                  onChange={(event) => patch({ galleryMaxItems: event.target.value })}
+                  onBlur={numberCommit('galleryMaxItems')}
+                  onKeyDown={(event) => event.key === 'Enter' && (event.target as HTMLInputElement).blur()}
+                  className="h-9 w-32 pr-11 text-right tnum"
                 />
-              </div>
-              <div className="field space-y-3 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label htmlFor="settings-gallery-save">保存到图库 images.saveGallery</Label>
-                    <p className="text-[11px] text-muted-foreground">所有生成的图片写入 data/images，在「Duck Image → 图库」浏览；收藏的图不会被自动清理。</p>
-                  </div>
-                  <Switch
-                    id="settings-gallery-save"
-                    checked={form.saveGallery}
-                    onCheckedChange={(checked) => patch({ saveGallery: checked })}
-                  />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="settings-gallery-days" className="text-xs">保留天数（0 = 永久）</Label>
+                <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">{Number(form.galleryMaxItems) ? '张' : '不限'}</span>
+              </SettingRow>
+            </>
+          ) : null}
+        </SettingsCard>
+
+        <ProxySection />
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((value) => !value)}
+            className="flex items-center gap-1.5 px-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            aria-expanded={advancedOpen}
+          >
+            高级设置
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {advancedOpen ? (
+            <div className="mt-4 space-y-8">
+              <SettingsCard
+                title="请求队列"
+                action={
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => void saveCard('queue')} disabled={saving}>
+                    {savingFor('queue') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    保存
+                  </Button>
+                }
+              >
+                {(
+                  [
+                    ['rps', '每秒请求数', 'settings-rps', '0.1'],
+                    ['maxConcurrent', '并发上限', 'settings-max-concurrent', '1'],
+                    ['queueLimit', '排队上限', 'settings-queue-limit', '1'],
+                    ['queueTimeoutMs', '排队超时（毫秒）', 'settings-queue-timeout', '1000']
+                  ] as const
+                ).map(([key, label, id, step]) => (
+                  <SettingRow key={key} label={label} htmlFor={id}>
                     <Input
-                      id="settings-gallery-days"
-                      inputMode="numeric"
-                      value={form.galleryRetentionDays}
-                      onChange={(event) => patch({ galleryRetentionDays: event.target.value })}
+                      id={id}
+                      type="number"
+                      step={step}
+                      value={form[key]}
+                      onChange={(event) => patch({ [key]: event.target.value } as Partial<FormState>)}
+                      aria-invalid={Boolean(fieldErrors[key])}
+                      title={fieldErrors[key]}
+                      className={`h-9 text-right tnum ${key === 'queueTimeoutMs' ? 'w-32' : 'w-24'} ${fieldErrors[key] ? 'border-destructive' : ''}`}
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="settings-gallery-max" className="text-xs">最多保留张数（0 = 不限）</Label>
-                    <Input
-                      id="settings-gallery-max"
-                      inputMode="numeric"
-                      value={form.galleryMaxItems}
-                      onChange={(event) => patch({ galleryMaxItems: event.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Label htmlFor="settings-tool-location">允许定位 tools.location</Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    允许上游询问「使用大致位置」（天气等更精准）；默认不允许（LocationPrompt 自动拒绝）。
-                  </p>
-                </div>
-                <Switch
-                  id="settings-tool-location"
-                  data-testid="settings-tool-location"
-                  checked={form.location}
-                  onCheckedChange={(checked) => patch({ location: checked })}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Label htmlFor="settings-tool-client-tools">客户端工具 tools.clientFunctionCalling.enabled</Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    允许 Codex/DSH 传 OpenAI tools[].function（文件读写等），网关自动转换 Completions/Responses
-                    协议并返回 tool_calls；工具由客户端本地执行，网关不执行、不接 MCP。
-                  </p>
-                </div>
-                <Switch
-                  id="settings-tool-client-tools"
-                  data-testid="settings-tool-client-tools"
-                  checked={form.clientFunctionCalling}
-                  onCheckedChange={(checked) => patch({ clientFunctionCalling: checked })}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end pt-0">
-              <Button size="sm" onClick={() => void saveCard('tools')} disabled={loading || saving} data-testid="settings-save-tools">
-                {savingFor('tools') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                保存工具配置
-              </Button>
-            </CardFooter>
-          </Card>
+                  </SettingRow>
+                ))}
+              </SettingsCard>
 
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-sm">日志</CardTitle>
-              <CardDescription className="text-xs">运行日志级别（上游/后台请求日志在「日志」页）</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>日志级别 logging.level</Label>
-                <Select value={form.logLevel} onValueChange={(value) => patch({ logLevel: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LOG_LEVELS.map((level) => (
-                      <SelectItem key={level} value={level}>
-                        {level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>各卡片保存后实时生效</span>
-                {loadedAt ? <Badge variant="outline">加载于 {formatDateTime(loadedAt)}</Badge> : null}
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end pt-0">
-              <Button size="sm" onClick={() => void saveCard('logging')} disabled={loading || saving} data-testid="settings-save-logging">
-                {savingFor('logging') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                保存日志配置
-              </Button>
-            </CardFooter>
-          </Card>
+              <SettingsCard
+                title="提示词"
+                data-testid="settings-prompts-card"
+                action={
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => void saveCard('prompts')} disabled={saving} data-testid="settings-save-prompts">
+                    {savingFor('prompts') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    保存
+                  </Button>
+                }
+              >
+                {selectRow('来源', form.promptSource, (value) => patch({ promptSource: value as FormState['promptSource'] }), [
+                  { value: 'duckai', label: 'duck.ai 生成器' },
+                  { value: 'custom', label: '自定义' },
+                  { value: 'none', label: '不注入' }
+                ], 'settings-prompt-source', 'w-48')}
+                {selectRow('注入方式', form.promptMode, (value) => patch({ promptMode: value as 'inline' | 'system' }), [
+                  { value: 'inline', label: '合并进首条消息' },
+                  { value: 'system', label: 'system 消息' }
+                ], 'settings-prompt-mode', 'w-48')}
+                {form.promptSource === 'duckai' ? (
+                  <>
+                    {selectRow('语气', form.duckai.tone, (value) => patchDuckai({ tone: value }), ids(promptOptions?.tones, ['Default', 'Casual', 'Professional']), 'settings-duckai-tone', 'w-48')}
+                    {selectRow('长度', form.duckai.length, (value) => patchDuckai({ length: value }), ids(promptOptions?.lengths, ['Default', 'Short', 'Shortest']), 'settings-duckai-length', 'w-48')}
+                    {selectRow('AI 角色', form.duckai.assistantRole, (value) => patchDuckai({ assistantRole: value }), ids(promptOptions?.assistant_roles, ASSISTANT_ROLES), 'settings-duckai-assistant-role', 'w-56')}
+                    {selectRow('你的角色', form.duckai.userRole, (value) => patchDuckai({ userRole: value }), ids(promptOptions?.user_roles, USER_ROLES), 'settings-duckai-user-role', 'w-48')}
+                    <SettingRow label="你的昵称" htmlFor="settings-duckai-user-name">
+                      <Input id="settings-duckai-user-name" value={form.duckai.userName} onChange={(event) => patchDuckai({ userName: event.target.value })} className="h-9 w-48" />
+                    </SettingRow>
+                    <SettingRow label="AI 昵称" htmlFor="settings-duckai-assistant-name">
+                      <Input id="settings-duckai-assistant-name" value={form.duckai.assistantName} onChange={(event) => patchDuckai({ assistantName: event.target.value })} className="h-9 w-48" />
+                    </SettingRow>
+                    <SettingRow label="先反问澄清" htmlFor="settings-duckai-clarify">
+                      <Switch id="settings-duckai-clarify" checked={form.duckai.shouldSeekClarity} onCheckedChange={(value) => patchDuckai({ shouldSeekClarity: value })} />
+                    </SettingRow>
+                    <div className="space-y-2 py-3">
+                      <label htmlFor="settings-duckai-additional" className="text-sm">附加指令</label>
+                      <Textarea id="settings-duckai-additional" value={form.duckai.additionalInstructions} onChange={(event) => patchDuckai({ additionalInstructions: event.target.value })} rows={3} />
+                    </div>
+                  </>
+                ) : null}
+                {form.promptSource === 'custom' ? (
+                  <div className="space-y-2 py-3">
+                    <label htmlFor="settings-system-prompt" className="text-sm">系统提示词</label>
+                    <Textarea id="settings-system-prompt" value={form.systemPrompt} onChange={(event) => patch({ systemPrompt: event.target.value })} rows={4} />
+                  </div>
+                ) : null}
+                {form.promptSource !== 'none' ? (
+                  <div className="space-y-2 py-3">
+                    <div className="text-[13px] text-muted-foreground">预览</div>
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted/60 p-3 text-[12px] text-muted-foreground" data-testid="settings-prompt-preview">
+                      {promptPreviewError ? `预览失败：${promptPreviewError}` : promptPreview || '（空）'}
+                    </pre>
+                  </div>
+                ) : null}
+              </SettingsCard>
+
+              <SettingsCard title="其他">
+                <SettingRow label="允许定位" htmlFor="settings-tool-location">
+                  <Switch id="settings-tool-location" checked={form.location} onCheckedChange={(value) => toggleTools({ location: value })} disabled={saving} />
+                </SettingRow>
+                <SettingRow label="客户端工具" htmlFor="settings-tool-client-tools">
+                  <Switch id="settings-tool-client-tools" checked={form.clientFunctionCalling} onCheckedChange={(value) => toggleTools({ clientFunctionCalling: value })} disabled={saving} />
+                </SettingRow>
+                {selectRow('日志级别', form.logLevel, (value) => {
+                  const next = { ...form, logLevel: value };
+                  setForm(next);
+                  void saveCard('logging', next);
+                }, LOG_LEVELS.map((level) => ({ value: level, label: level })), 'settings-log-level', 'w-32')}
+              </SettingsCard>
+            </div>
+          ) : null}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -17,11 +17,15 @@
 - **图库**：每张图自动保存，可搜索、收藏、下载、删除；收藏的图不会被自动清理。
 - **联网搜索对话**：「对话」页默认开启联网搜索，回答带来源链接。
 - **OpenAI 兼容 API**：`/v1/images/generations`、`/v1/images/edits`、`/v1/chat/completions`（支持 `web_search`）、`/v1/models`。
-- **安静的界面**：杂志风排版，浅色 / 深色两套。一切正常时不打扰你；出错时状态点变红，点一下就是日志。
+- **安静的界面**：极简中性风，浅色 / 深色两套。一切正常时不打扰你；出错时状态点变红，点一下就是日志。
 
-| 选项都收在 + 里 | 出图 |
+| 选项都收在 + 里 | Duck Chat |
 | --- | --- |
-| ![选项](docs/assets/duck-image-options.png) | ![结果](docs/assets/duck-image-result.png) |
+| ![选项](docs/assets/duck-image-options.png) | ![对话](docs/assets/duck-image-chat.png) |
+
+| 账号 | 设置（含代理） |
+| --- | --- |
+| ![账号](docs/assets/duck-image-accounts.png) | ![设置](docs/assets/duck-image-settings.png) |
 
 | 图库 | 深色 |
 | --- | --- |

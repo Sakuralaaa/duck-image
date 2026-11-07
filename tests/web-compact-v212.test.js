@@ -286,12 +286,12 @@ test('摘要折叠块：默认折叠→展开显示/复制→编辑 PATCH→清�
   }
 });
 
-test('模型压缩能力标识：gpt-6-luna 显示「不支持自动压缩」，模型列表含 gpt-5.4-mini「支持自动压缩」', async () => {
+test('Duck Chat：不再显示上下文/压缩能力信息行；会话可从历史抽屉选中', async () => {
   const env = await mountPlayground();
   try {
-    await env.waitForText('上下文约', 10000);
-    await env.waitForText('不支持自动压缩', 8000);
-    assert.ok(env.text().includes('支持自动压缩'), '模型中应有支持自动压缩标识（下拉/工具栏）');
+    await env.waitFor(() => env.textarea(), { label: 'composer' });
+    assert.ok(!env.text().includes('上下文约'), '不应显示上下文信息行');
+    assert.ok(!env.text().includes('不支持自动压缩'), '不应显示压缩能力信息');
     await env.waitForText('会话A');
     env.clickText('会话A');
     assert.equal(env.errors.length, 0, `控制台不应有报错：\n${env.errors.join('\n')}`);

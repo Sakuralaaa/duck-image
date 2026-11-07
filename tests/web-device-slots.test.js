@@ -268,10 +268,13 @@ test('身份池：设备名称列显示 DuckAI@main/DuckCPA@xxxx；默认身份�
     await env.waitForText('设备名称');
     await env.waitForText('DuckAI@main');
     await env.waitForText('DuckCPA@b2c4');
-    await env.waitForText('默认 · 不可删除');
+    await env.waitForText('默认');
     const rows = [...env.window.document.querySelectorAll('tr')];
     const defaultRow = rows.find((row) => (row.textContent || '').includes('DuckAI@main'));
     assert.ok(defaultRow, '应有默认身份行');
+    // v0.5：行操作收进「…」菜单
+    env.click(defaultRow.querySelector('button[aria-label="更多操作"]'));
+    await env.waitFor(() => defaultRow.querySelector('button[aria-label="删除"]'), { label: '删除菜单项' });
     const deleteButton = [...defaultRow.querySelectorAll('button')].find((button) => (button.getAttribute('aria-label') || '') === '删除');
     assert.ok(deleteButton, '默认行应有删除按钮');
     assert.equal(deleteButton.disabled, true, '默认身份删除按钮应 disabled');

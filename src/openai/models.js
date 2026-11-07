@@ -19,10 +19,7 @@ export const TOOL_IMAGE_GENERATION = 'image_generation';
 export const FREE_MODEL_IDS = Object.freeze([
   'gpt-6-luna',
   'gpt-5.4-mini',
-  'claude-haiku-4-5',
-  'mistral-small-2603',
-  'tinfoil/gpt-oss-120b',
-  'tinfoil/gemma4-31b'
+  'claude-haiku-5-5'
 ]);
 
 export const PAID_MODEL_IDS = Object.freeze([

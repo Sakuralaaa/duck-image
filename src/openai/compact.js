@@ -52,7 +52,6 @@ export const COMPACTION_SUPPORTED_MODELS = Object.freeze([
   ...(Array.isArray(DUCK_COMPACTION_MODELS) && DUCK_COMPACTION_MODELS.length
     ? DUCK_COMPACTION_MODELS
     : [
-        'claude-haiku-4-5',
         'claude-haiku-5-5',
         'claude-sonnet-4-6',
         'claude-sonnet-5-5',

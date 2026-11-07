@@ -1,44 +1,71 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export const ROUTES = [
-  'overview',
   'images',
   'chat',
-  'identity',
-  'identities',
-  'subscriptions',
-  'history',
-  'proxy',
-  'settings',
-  'model-config',
+  'gallery',
+  'accounts',
   'keys',
+  'settings',
+  'overview',
+  'subscriptions',
   'logs',
+  'history',
+  'model-config',
   'examples'
 ] as const;
 export type Route = (typeof ROUTES)[number];
 
-export const ROUTE_META: Record<Route, { title: string; description: string }> = {
-  overview: { title: '概览', description: '上游健康、RPS 队列与请求统计' },
-  images: { title: 'Duck Image', description: '一句话生成图片，可上传参考图' },
-  chat: { title: '对话', description: '和 duck.ai 聊天，可开联网搜索' },
-  identity: { title: '默认身份', description: '默认匿名身份（journeyId/指纹）与 DuckDuckGo Sync & Backup' },
-  identities: { title: '身份池', description: '匿名分身池、会话绑定、订阅绑定与路由策略' },
-  subscriptions: { title: '订阅', description: 'DuckDuckGo Plus/Pro 订阅池：一个订阅可绑定多个身份' },
-  history: { title: '会话历史', description: '按身份分组的只读会话记录（SQLite，默认保留 30 天）' },
-  proxy: { title: '代理', description: '网关出站代理（HTTP/HTTPS/SOCKS），含连通性测试' },
-  settings: { title: '设置', description: '队列、模型、提示词与日志配置' },
-  'model-config': {
-    title: '模型配置',
-    description: '按模型自定义上下文窗口 / 单条输入 / 输出上限（默认 duck.ai 实测值）'
-  },
-  keys: { title: 'API Key', description: '强制鉴权：所有 /v1/* 请求都需要 API Key' },
-  logs: { title: '日志', description: '上游请求与后台 API 日志（分开存储）' },
-  examples: { title: '调用示例', description: 'cURL / OpenAI SDK / Responses 示例' }
+/**
+ * 旧地址兼容：身份池（#/identities）、默认身份（#/identity）并入「账号」；
+ * 代理（#/proxy）并入「设置」。值为新的 hash（可带查询串）。
+ */
+export const LEGACY_ROUTES: Record<string, string> = {
+  identities: 'accounts',
+  identity: 'accounts?adv=sync',
+  proxy: 'settings?section=proxy'
 };
 
+export const ROUTE_META: Record<Route, { title: string }> = {
+  images: { title: 'Duck Image' },
+  chat: { title: 'Duck Chat' },
+  gallery: { title: '图库' },
+  accounts: { title: '账号' },
+  keys: { title: 'API Key' },
+  settings: { title: '设置' },
+  overview: { title: '概览' },
+  subscriptions: { title: '订阅' },
+  logs: { title: '日志' },
+  history: { title: '会话历史' },
+  'model-config': { title: '模型配置' },
+  examples: { title: '调用示例' }
+};
+
+function rawHash(): { path: string; query: string } {
+  const raw = window.location.hash.replace(/^#\/?/, '');
+  const index = raw.search(/[?&#]/);
+  return index < 0 ? { path: raw, query: '' } : { path: raw.slice(0, index), query: raw.slice(index) };
+}
+
+/** 读取当前 hash 查询参数（如 #/accounts?adv=sync）。 */
+export function hashParam(name: string): string | null {
+  const { query } = rawHash();
+  if (!query) return null;
+  return new URLSearchParams(query.replace(/^[?&#]/, '')).get(name);
+}
+
+function redirectLegacy(): void {
+  const { path, query } = rawHash();
+  const target = LEGACY_ROUTES[path];
+  if (!target) return;
+  const extra = query && !target.includes('?') ? query : '';
+  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/${target}${extra}`);
+}
+
 function parseHash(): Route {
-  const raw = window.location.hash.replace(/^#\/?/, '').split(/[?&#]/)[0];
-  return (ROUTES as readonly string[]).includes(raw) ? (raw as Route) : 'images';
+  redirectLegacy();
+  const { path } = rawHash();
+  return (ROUTES as readonly string[]).includes(path) ? (path as Route) : 'images';
 }
 
 export function useHashRoute(): [Route, (route: Route) => void] {
@@ -51,16 +78,10 @@ export function useHashRoute(): [Route, (route: Route) => void] {
   }, []);
 
   useEffect(() => {
-    // 只在「hash 为空」时补默认路由；**不要**重写带查询串的 hash，
-    // 否则会丢掉订阅登录回调的 `?sessionId=..&token=..`（v2.26）。
+    // 只在「hash 为空」时补默认路由；不要重写带查询串的 hash（订阅登录回调需要 ?sessionId=..&token=..）。
     if (!window.location.hash) {
-      window.history.replaceState(
-        null,
-        '',
-        `${window.location.pathname}${window.location.search}#/${parseHash()}`
-      );
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/${parseHash()}`);
     }
-    // 只在首次挂载时归一化 hash
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

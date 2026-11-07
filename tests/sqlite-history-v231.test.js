@@ -56,7 +56,7 @@ test('会话历史：写入 / 按身份分组 / 详情 / 保留天数清理', as
   history.record({
     identityId: 'id_b',
     sessionKey: 'sess_2',
-    model: 'claude-haiku-4-5',
+    model: 'claude-haiku-5-5',
     messages: [{ role: 'user', content: '另一个身份' }]
   });
 

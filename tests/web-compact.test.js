@@ -262,11 +262,7 @@ async function mountPlayground() {
 test('compact 前端：模型上下文行、手动压缩 loading/成功、summary 徽章展开/复制、自动压缩提示条', async () => {
   const env = await mountPlayground();
   try {
-    // 模型上下文行（工具栏）
-    await env.waitForText('上下文约', 10000);
-    assert.ok(env.text().includes('16,000'), '应显示 16,000 字符');
-    assert.ok(env.text().includes('估算 tokens'), '应显示估算 tokens 说明');
-
+    // v0.5 Duck Chat：输入框不再显示上下文/输入上限信息行
     // 选中会话
     await env.waitForText('会话A');
     env.clickText('会话A');

@@ -57,7 +57,7 @@ test('GET /admin/api/overview：service/upstream.queue/stats 拆分/models/recen
     assert.equal(body.recentUpstream.length, 1);
     assert.ok(body.recentAdmin.length >= 1);
 
-    assert.ok(Array.isArray(body.models) && body.models.length >= 10);
+    assert.ok(Array.isArray(body.models) && body.models.length >= 7);
     const opus = body.models.find((model) => model.id === 'claude-opus-5-5');
     assert.ok(opus, 'paid model missing from overview.models');
     assert.equal(opus.paid, true);

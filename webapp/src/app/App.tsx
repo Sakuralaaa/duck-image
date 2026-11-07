@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiGet, setUnauthorizedHandler } from './lib/api';
 import { clearStoredToken, readStoredToken, readTokenFromUrl, storeToken, stripTokenFromUrl } from './lib/token';
-import { useHashRoute, type Route } from './lib/hash-route';
+import { ROUTE_META, useHashRoute, type Route } from './lib/hash-route';
 import { ThemeProvider, useTheme } from './lib/theme';
 import { OverviewProvider } from './lib/overview-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -14,11 +14,9 @@ import { LoginGate } from './components/login-gate';
 import { OverviewPage } from './pages/overview';
 import { PlaygroundPage } from './pages/playground';
 import { ImagesPage } from './pages/images';
-import { IdentityPage } from './pages/identity';
 import { IdentitiesPage } from './pages/identities';
 import { SubscriptionsPage } from './pages/subscriptions';
 import { HistoryPage } from './pages/history';
-import { ProxyPage } from './pages/proxy';
 import { SettingsPage } from './pages/settings';
 import { ModelConfigPage } from './pages/model-config';
 import { KeysPage } from './pages/keys';
@@ -41,52 +39,34 @@ function BootSplash() {
 
 function PageFor({ route }: { route: Route }) {
   switch (route) {
-    case 'overview':
-      return <OverviewPage />;
     case 'images':
-      return <ImagesPage />;
+      return <ImagesPage key="create" />;
+    case 'gallery':
+      return <ImagesPage key="gallery" initialView="gallery" />;
     case 'chat':
       return <PlaygroundPage />;
-    case 'identity':
-      return <IdentityPage />;
-    case 'identities':
+    case 'accounts':
       return <IdentitiesPage />;
+    case 'keys':
+      return <KeysPage />;
+    case 'settings':
+      return <SettingsPage />;
+    case 'overview':
+      return <OverviewPage />;
     case 'subscriptions':
       return <SubscriptionsPage />;
     case 'history':
       return <HistoryPage />;
-    case 'proxy':
-      return <ProxyPage />;
-    case 'settings':
-      return <SettingsPage />;
     case 'model-config':
       return <ModelConfigPage />;
-    case 'keys':
-      return <KeysPage />;
     case 'logs':
       return <LogsPage />;
     case 'examples':
       return <ExamplesPage />;
     default:
-      return <OverviewPage />;
+      return <ImagesPage />;
   }
 }
-
-const ROUTE_TITLES: Record<Route, string> = {
-  overview: '概览',
-  images: 'Duck Image',
-  chat: '对话',
-  history: '会话历史',
-  identity: '默认身份',
-  identities: '身份池',
-  subscriptions: '订阅',
-  proxy: '代理',
-  settings: '设置',
-  'model-config': '模型配置',
-  keys: 'API Key',
-  logs: '日志',
-  examples: '调用示例'
-};
 
 function AuthGate() {
   const [auth, setAuth] = useState<AuthState>('checking');
@@ -162,7 +142,7 @@ function AuthGate() {
   }, []);
 
   useEffect(() => {
-    document.title = `${ROUTE_TITLES[route] ?? '管理控制台'} · Duck Image`;
+    document.title = `${ROUTE_META[route]?.title ?? '管理控制台'} · Duck Image`;
   }, [route]);
 
   if (auth === 'checking') return <BootSplash />;

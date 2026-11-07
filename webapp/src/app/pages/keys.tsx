@@ -87,126 +87,73 @@ export function KeysPage() {
   const totalRequests = items.reduce((sum, item) => sum + (Number(item.requestCount) || 0), 0);
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-[860px]">
       <PageHeader
         title="API Key"
-        description="强制鉴权：所有 /v1/* 请求都必须携带 API Key"
+        actions={
+          <Button size="sm" data-testid="keys-create" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            创建 Key
+          </Button>
+        }
       />
-
-      <div className="mb-4 flex items-start gap-2 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        <div className="space-y-1">
-          <p className="font-medium text-foreground">v2 起 /v1/* 强制 API Key</p>
-          <p className="text-xs text-muted-foreground">
-            无 Key 或 Key 错误会返回 401 <code className="rounded bg-muted px-1">invalid_api_key</code>。
-            首次启动会自动创建 label 为 <code className="rounded bg-muted px-1">default</code> 的 Key，完整值只打印到启动日志；
-            完整 Key 也仅在创建时展示一次，请立即复制保存。
-          </p>
-        </div>
-      </div>
 
       {error ? <ErrorBanner message={error} onRetry={() => void load()} /> : null}
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-sm">Key 列表</CardTitle>
-              <CardDescription className="text-xs">
-                共 {items.length} 个 Key · 累计请求 {formatNumber(totalRequests)} 次
-              </CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {items.length > 0 ? <Badge variant="outline">强制鉴权已启用</Badge> : null}
-              <Button
-                variant="outline"
-                size="sm"
-                data-testid="keys-refresh"
-                onClick={() => void load()}
-                disabled={loading}
-              >
-                <RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
-                刷新
-              </Button>
-              <Button size="sm" data-testid="keys-create" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-3.5 w-3.5" />
-                创建 Key
-              </Button>
-            </div>
+      <div className="surface px-2 py-1">
+        {loading && items.length === 0 ? (
+          <div className="space-y-2 p-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-10 rounded-lg" />
+            ))}
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading && items.length === 0 ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-10 rounded-md" />
+        ) : items.length === 0 ? (
+          <div className="py-14 text-center text-sm text-muted-foreground">还没有 API Key</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[12px] text-muted-foreground">
+                <th className="px-3 py-2.5 font-medium">名称</th>
+                <th className="px-3 py-2.5 font-medium">Key</th>
+                <th className="w-32 px-3 py-2.5 font-medium">最近使用</th>
+                <th className="w-12 px-3 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className="border-t border-border transition-colors hover:bg-muted/40">
+                  <td className="px-3 py-3 font-medium">{item.label || '未命名'}</td>
+                  <td className="px-3 py-3">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="font-mono text-[12.5px] text-muted-foreground">{item.keyPreview}</span>
+                      <CopyButton value={item.keyPreview} size="sm" variant="ghost" />
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-[13px] text-muted-foreground">
+                    {item.lastUsedAt ? formatRelative(item.lastUsedAt) : '—'}
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="删除"
+                      className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setRevokeTarget(item)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
               ))}
-            </div>
-          ) : items.length === 0 ? (
-            <EmptyState
-              icon={KeyRound}
-              title="还没有 API Key"
-              description="创建第一个 Key 后，客户端即可通过 Authorization: Bearer <key> 调用 /v1/*。"
-              action={
-                <Button size="sm" onClick={() => setCreateOpen(true)}>
-                  <Plus className="h-3.5 w-3.5" />
-                  创建第一个 Key
-                </Button>
-              }
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>标签</TableHead>
-                  <TableHead>Key 预览</TableHead>
-                  <TableHead>创建时间</TableHead>
-                  <TableHead>最近使用</TableHead>
-                  <TableHead className="text-right">请求数</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">
-                      <span className="flex items-center gap-1.5">
-                        <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
-                        {item.label || '未命名'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-xs text-muted-foreground">{item.keyPreview}</span>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {item.lastUsedAt ? formatRelative(item.lastUsedAt) : '从未使用'}
-                    </TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{formatNumber(item.requestCount)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setRevokeTarget(item)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        吊销
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <Dialog open={createOpen} onOpenChange={(open) => (!creating ? setCreateOpen(open) : null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>创建 API Key</DialogTitle>
-            <DialogDescription>给这个 Key 一个便于识别的标签；创建后完整 Key 只显示一次。</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-3"
@@ -216,7 +163,7 @@ export function KeysPage() {
             }}
           >
             <div className="space-y-1.5">
-              <Label htmlFor="key-label">标签</Label>
+              <Label htmlFor="key-label">名称</Label>
               <Input
                 id="key-label"
                 value={label}
@@ -243,20 +190,16 @@ export function KeysPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>API Key 创建成功</DialogTitle>
-            <DialogDescription>把下面的 Key 填入客户端配置；关闭后将无法再次查看完整 Key。</DialogDescription>
+            <DialogDescription>关闭后无法再次查看完整 Key。</DialogDescription>
           </DialogHeader>
           {created ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label>完整 Key（{created.label}）</Label>
+                <Label>{created.label}</Label>
                 <div className="flex gap-2">
                   <Input readOnly value={created.key} className="font-mono text-xs" onFocus={(event) => event.currentTarget.select()} />
                   <CopyButton value={created.key} label="复制" />
                 </div>
-              </div>
-              <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                请立即复制并妥善保存；如遗失只能吊销后重新创建。
               </div>
             </div>
           ) : null}
@@ -272,9 +215,9 @@ export function KeysPage() {
       <ConfirmDialog
         open={Boolean(revokeTarget)}
         onOpenChange={(open) => (!open ? setRevokeTarget(null) : null)}
-        title="吊销 API Key？"
-        description={`吊销「${revokeTarget?.label ?? ''}」后，使用该 Key 的客户端会立即失效，此操作不可撤销。`}
-        confirmText="吊销"
+        title="删除 API Key？"
+        description={`删除「${revokeTarget?.label ?? ''}」后，使用它的客户端会立即失效。`}
+        confirmText="删除"
         destructive
         onConfirm={revoke}
       />
