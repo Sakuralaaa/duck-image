@@ -20,6 +20,7 @@ test('image2.5 在模型列表可发现，生图默认和显式请求均路由�
     const imageModel = models.json.data.find((entry) => entry.id === 'image2.5');
     assert.equal(imageModel.model_type, 'image');
     assert.equal(imageModel.backend_model, 'gpt-6-luna');
+    assert.deepEqual(imageModel.supported_reasoning_efforts, []);
     const details = await v1Request(baseUrl, '/v1/models/image2.5');
     assert.equal(details.status, 200);
     for (const model of [undefined, 'image2.5']) {
