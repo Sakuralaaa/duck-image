@@ -20,6 +20,9 @@
 # ---------------------------------------------------------------------------
 
 # ---------- 构建阶段：web + 单文件二进制 ----------
+# bun 也固定为构建机架构（COPY --from=镜像 会按目标平台解析，arm64 下会拿到跑不起来的 bun）
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.4 AS bun
+
 FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS build
 
 # 多架构：构建阶段始终跑在构建机原生架构，按 TARGETARCH 交叉编译 musl 二进制（amd64 → x64，arm64 → arm64）
@@ -28,7 +31,7 @@ ARG TARGETARCH=amd64
 WORKDIR /app
 
 # 从官方 Bun 镜像复用可执行文件（要求 Bun >= 1.4.4；--trim / --asset 需要新版）
-COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
 # 先装依赖，利用 Docker layer cache
 COPY package.json package-lock.json ./
