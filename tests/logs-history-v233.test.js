@@ -44,9 +44,6 @@ test('一次 /v1/responses 请求只产生一条 upstream 日志（sessionKey/re
     assert.equal(item.sessionKey, sessionKey, '日志应带 sessionKey');
     assert.ok(item.requestId, '日志应带 requestId');
     assert.ok(item.identityId, '日志应带绑定身份');
-    assert.ok(item.historyId, 'v0.5.1：日志应关联会话上下文 historyId');
-    const detail = await fetch(`${baseUrl}/admin/api/history/${encodeURIComponent(item.historyId)}`, { headers: adminHeaders() });
-    assert.equal(detail.status, 200, 'historyId 应能打开对应上下文');
   });
 });
 
@@ -83,5 +80,11 @@ test('/v1/responses（流式/非流式）都写入会话历史', async () => {
     const detail = history.get(byKey.get(nonStreamKey).id);
     assert.equal(detail.messages[0].content, '第一问');
     assert.equal(detail.messages.at(-1).role, 'assistant');
+
+    // v0.5.1：日志条目关联会话上下文（日志页「查看上下文」）
+    const logs = await listUpstreamLogs(baseUrl);
+    const logItem = (logs.items || []).find((item) => item.sessionKey === nonStreamKey);
+    assert.ok(logItem, '应有对应 upstream 日志');
+    assert.equal(logItem.historyId, byKey.get(nonStreamKey).id, '日志应带 historyId 指向会话上下文');
   });
 });
