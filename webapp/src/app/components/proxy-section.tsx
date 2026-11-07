@@ -105,6 +105,8 @@ export function ProxySection() {
   const test = async () => {
     const payload = buildPayload(true);
     if (!payload) return;
+    // /proxy/test 只接受连接参数；enabled 属于保存语义，传了会被后端拒绝。
+    delete payload.enabled;
     setTesting(true);
     try {
       const result = await apiPost<ProxyTestResult>('/proxy/test', payload);

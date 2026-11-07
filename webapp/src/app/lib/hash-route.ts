@@ -36,7 +36,7 @@ export const ROUTE_META: Record<Route, { title: string }> = {
   overview: { title: '概览' },
   subscriptions: { title: '订阅' },
   logs: { title: '日志' },
-  history: { title: '会话历史' },
+  history: { title: '对话上下文' },
   'model-config': { title: '模型配置' },
   examples: { title: '调用示例' }
 };

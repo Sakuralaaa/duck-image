@@ -1420,7 +1420,7 @@ export function PlaygroundPage() {
   const effortOptions = reasoningOptions.filter((value) => ['none', 'low', 'medium'].includes(value));
 
   const composer = (
-    <div className={cn('z-20 w-full', hasConversation ? 'sticky bottom-4 pb-2' : '')}>
+    <div className="w-full">
       <div className="rounded-2xl border border-border bg-card px-3 pb-2.5 pt-3 shadow-lift transition-shadow focus-within:border-[color:hsl(var(--ring)/0.5)]">
         <Textarea
           value={input}
@@ -1450,7 +1450,7 @@ export function PlaygroundPage() {
               <Plus className={cn('h-4 w-4 transition', plusOpen && 'rotate-45')} />
             </button>
             {plusOpen ? (
-              <div className={cn('absolute left-0 z-30 w-64 space-y-3 rounded-xl border border-border bg-popover p-3 text-left shadow-lift', hasConversation ? 'bottom-11' : 'top-11')}>
+              <div className="absolute bottom-11 left-0 z-30 max-h-[min(70vh,480px)] w-64 space-y-3 overflow-y-auto rounded-xl border border-border bg-popover p-3 text-left shadow-lift">
                 <div>
                   <div className="mb-1.5 px-1 text-[12px] font-medium text-muted-foreground">推理强度</div>
                   <div className="flex flex-wrap gap-1.5">
@@ -1561,7 +1561,7 @@ export function PlaygroundPage() {
 
       {error ? <ErrorBanner message={error} onRetry={() => void loadSessions()} /> : null}
 
-      <div className={cn('flex flex-1 flex-col', !hasConversation && 'items-center pt-[8vh] text-center')}>
+      <div className="flex flex-1 flex-col">
         {hasConversation ? (
           <div className="flex flex-1 flex-col">
           <div className="mb-2 flex min-h-8 items-center gap-2 text-[13px] text-muted-foreground">
@@ -1642,9 +1642,12 @@ export function PlaygroundPage() {
           </div>
           </div>
         ) : (
-          <h1 className="text-[26px] font-semibold tracking-tight">有什么想聊的？</h1>
+          <div className="flex flex-1 flex-col items-center pb-6 pt-[18vh] text-center">
+            <h1 className="text-[26px] font-semibold tracking-tight">有什么想聊的？</h1>
+            <p className="mt-2 text-sm text-muted-foreground">回复会显示在这里，输入框在下方。</p>
+          </div>
         )}
-        <div className={cn('w-full text-left', hasConversation ? 'sticky bottom-0' : 'mt-6')}>{composer}</div>
+        <div className="sticky bottom-0 z-20 w-full bg-gradient-to-t from-background via-background to-background/0 pb-4 pt-3 text-left">{composer}</div>
       </div>
 
       {/* 历史会话抽屉（常驻挂载，关闭时移出视口） */}

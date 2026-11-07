@@ -31,6 +31,7 @@ import { handleKeys } from './routes/keys.js';
 import { handleHistory } from './routes/history.js';
 import { handleSessions } from './routes/sessions.js';
 import { handleImages } from './routes/images.js';
+import { handleAdminToken } from './routes/admin-token.js';
 import { notFound } from '../openai/errors.js';
 
 /* ------------------------------------------------------------------ */
@@ -72,6 +73,9 @@ export async function handleAdminRequest(ctx, route, method) {
       }
       if (parts.length === 2 && parts[1] === 'reset') return handleResetConfig(ctx);
       throw notFound(`Unknown admin endpoint: ${method} ${route}`);
+    case 'admin-token':
+      if (parts.length !== 1) throw notFound(`Unknown admin endpoint: ${method} ${route}`);
+      return handleAdminToken(ctx);
     case 'logs':
       if (parts.length === 2 && parts[1] === 'download') return handleLogsDownload(ctx);
       if (parts.length === 2 && parts[1] === 'retention') return handleLogsRetention(ctx);

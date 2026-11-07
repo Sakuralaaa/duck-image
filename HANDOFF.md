@@ -15,3 +15,15 @@
 - **账号**：身份池 + 默认身份合并（旧 `#/identities`、`#/identity` 自动跳转），列表只显示名称/状态/最近使用，操作收进 … 菜单。
 - **API Key**：简洁列表 + 弹窗创建。**生图页**：收紧留白，下方显示最近作品。**Duck Chat**：布局与生图页一致，历史会话放进右侧抽屉。
 - **模型**：`claude-haiku-4-5` → `claude-haiku-5-5`（推定）；移除 `mistral-small-2603`、`tinfoil/gpt-oss-120b`、`tinfoil/gemma4-31b`，旧 id 作为别名回落（haiku-4-5 → haiku-5-5，其余 → gpt-6-luna）。
+
+### v0.5.1（2026-11-07）
+
+- **修复代理测试**：设置页「测试」会把 `enabled` 一起发给 `POST /admin/api/proxy/test`，后端按白名单拒绝（`unknown proxy field "enabled"`），导致正常代理也测不通。测试请求不再携带 `enabled`。
+- **生图页 / Duck Chat 布局**：输入框固定贴底（sticky，底部渐隐），中上方展示最近作品、生成中占位与结果 / 对话内容；`+` 选项面板始终向上弹出并限制最大高度，不再被页面顶部遮住。
+- **设置 → 面板密码**：新增 `POST /admin/api/admin-token`（`{ current, next }`，新密码 8-200 位、无空白），校验当前密码后写入 `config.auth.adminToken` 并立即生效，前端同步更新本地凭据。若用 `DUCKAI_CPA_ADMIN_TOKEN` 环境变量指定密码，接口返回 409，需改环境变量重启。
+
+### v0.5.1（2026-11-07）
+
+- **修复代理测试**：设置页「测试」会把 `enabled` 一起发给 `POST /admin/api/proxy/test`，后端按白名单拒绝（`unknown proxy field "enabled"`），导致正常代理也测不通。测试请求不再携带 `enabled`。
+- **生图页 / Duck Chat 布局**：输入框固定贴底（sticky，底部渐隐），中上方展示最近作品、生成中占位与结果 / 对话内容；`+` 选项面板始终向上弹出并限制最大高度，不再被页面顶部遮住。
+- **会话历史并入日志**：侧栏去掉「会话历史」；上游日志条目新增 `historyId`，日志页模型列下有「查看上下文」，跳到 `#/history?id=…`（页名改为「对话上下文」，带返回日志）。底层 SQLite 历史存储与 API 不变。

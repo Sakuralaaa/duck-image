@@ -104,6 +104,8 @@ export interface UpstreamLogItem {
   protocolInjected?: boolean;
   upstreamMessageCount?: number | null;
   conversationChain?: string | null;
+  /** v0.5.1：关联的会话上下文 id（#/history?id=）。 */
+  historyId?: string | null;
 }
 
 export interface AdminLogItem {

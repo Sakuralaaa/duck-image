@@ -2,7 +2,6 @@ import {
   ChevronDown,
   Code2,
   CreditCard,
-  History,
   ImagePlus,
   Images,
   KeyRound,
@@ -44,7 +43,6 @@ const MORE: NavItem[] = [
   { route: 'overview', label: '概览', icon: LayoutDashboard },
   { route: 'subscriptions', label: '订阅', icon: CreditCard },
   { route: 'logs', label: '日志', icon: ScrollText },
-  { route: 'history', label: '会话历史', icon: History },
   { route: 'model-config', label: '模型配置', icon: SlidersHorizontal },
   { route: 'examples', label: '调用示例', icon: Code2 }
 ];

@@ -527,7 +527,7 @@ export function recordHistoryOnLog(
       normalized.push(assistant);
     }
     if (!normalized.length) return;
-    record({
+    const saved = record({
       identityId: ctx.log?.identityId || ctx.identityRoute?.identityId || null,
       identityLabel: ctx.log?.identityLabel || null,
       sessionKey: ctx.historySessionKey || ctx.sessionKey || null,
@@ -537,6 +537,8 @@ export function recordHistoryOnLog(
       injection: ctx.historyInjection || null,
       ts: Date.now()
     });
+    // v0.5.1：日志条目关联会话上下文（日志页「上下文」入口）
+    if (saved?.id && ctx.log) ctx.log.historyId = saved.id;
   } catch {
     // 历史记录失败不影响主流程
   }

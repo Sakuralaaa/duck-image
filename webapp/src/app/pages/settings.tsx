@@ -8,6 +8,7 @@ import { PageHeader } from '@/app/components/page-header';
 import { ErrorBanner } from '@/app/components/error-banner';
 import { Button } from '@/components/ui/button';
 import { ProxySection } from '@/app/components/proxy-section';
+import { AdminTokenSection } from '@/app/components/admin-token-section';
 import { SettingRow, SettingsCard } from '@/app/components/setting-row';
 import { Input } from '@/components/ui/input';
 import {
@@ -466,6 +467,7 @@ export function SettingsPage() {
         </SettingsCard>
 
         <ProxySection />
+        <AdminTokenSection />
 
         <div>
           <button

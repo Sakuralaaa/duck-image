@@ -3,6 +3,7 @@ import { AlertTriangle, ChevronDown, Code2, History, Loader2, RefreshCw, Server,
 import { toast } from 'sonner';
 
 import { apiDelete, apiGet, apiPut, ApiError } from '@/app/lib/api';
+import { hashParam } from '@/app/lib/hash-route';
 import { formatDateTime, formatNumber } from '@/app/lib/format';
 import { PageHeader } from '@/app/components/page-header';
 import { ErrorBanner } from '@/app/components/error-banner';
@@ -190,6 +191,12 @@ export function HistoryPage() {
     }
   }, []);
 
+  // v0.5.1：从日志「查看上下文」进入时直接打开对应会话
+  useEffect(() => {
+    const id = hashParam('id');
+    if (id) void loadDetail(id);
+  }, [loadDetail]);
+
   /** v2.48：查看该会话最近一次实际发给上游的请求（脱敏 JSON，仅本地调试）。 */
   const loadUpstream = useCallback(async (id: string) => {
     setUpstreamLoading(true);
@@ -244,8 +251,13 @@ export function HistoryPage() {
   return (
     <div className="space-y-4" data-testid="history-page">
       <PageHeader
-        title="会话历史"
-        description="按身份分组的只读会话记录（SQLite 存储）。默认保留 30 天：超过该天数未更新的会话会被自动清理。"
+        title="对话上下文"
+        note="日志里每次聊天请求的完整上下文（只读）"
+        actions={
+          <a href="#/logs" className="text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            ← 返回日志
+          </a>
+        }
       />
 
       {error ? <ErrorBanner message={error} onRetry={() => void load()} /> : null}

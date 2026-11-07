@@ -372,7 +372,8 @@ export function createServer(options = {}) {
             clientTools: ctx.log.clientTools ?? null,
             protocolInjected: Boolean(ctx.log.protocolInjected),
             upstreamMessageCount: ctx.log.upstreamMessageCount ?? null,
-            conversationChain: ctx.log.conversationChain ?? null
+            conversationChain: ctx.log.conversationChain ?? null,
+            historyId: ctx.log.historyId ?? null
           });
         } else if (ctx.log.kind === 'admin') {
           store.recordAdmin?.({

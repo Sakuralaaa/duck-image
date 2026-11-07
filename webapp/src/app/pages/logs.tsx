@@ -311,6 +311,15 @@ export function LogsPage() {
                     <TableCell className="max-w-[150px]">
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <span className="truncate font-mono text-xs">{item.model ?? '—'}</span>
+                        {item.historyId ? (
+                          <a
+                            href={`#/history?id=${encodeURIComponent(item.historyId)}`}
+                            className="w-fit text-[11px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                            data-testid={`log-context-${item.id ?? index}`}
+                          >
+                            查看上下文
+                          </a>
+                        ) : null}
                         {item.protocolInjected ? (
                           <Badge
                             variant="info"

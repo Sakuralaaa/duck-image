@@ -731,7 +731,7 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
   const hasTurns = turns.length > 0;
 
   const composer = (
-    <div className={cn('z-20 w-full', hasTurns ? 'sticky bottom-4 pb-2' : '')}>
+    <div className="sticky bottom-0 z-20 w-full bg-gradient-to-t from-background via-background to-background/0 pb-4 pt-3">
       {dragging ? (
         <div className="mb-2 rounded-xl border border-dashed border-[color:hsl(var(--brand))] bg-card py-3 text-center text-sm text-brand">
           松手即可作为参考图
@@ -769,7 +769,7 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
               <Plus className={cn('h-4 w-4 transition', menuOpen && 'rotate-45')} />
             </button>
             {menuOpen ? (
-              <div className="absolute bottom-12 left-0 z-30 w-[320px] space-y-4 rounded-xl border border-border bg-popover p-4 text-left shadow-lift">
+              <div className="absolute bottom-12 left-0 z-30 max-h-[min(70vh,520px)] w-[320px] space-y-4 overflow-y-auto rounded-xl border border-border bg-popover p-4 text-left shadow-lift">
                 <button
                   type="button"
                   onClick={() => {
@@ -1005,33 +1005,34 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
               <div ref={feedEnd} />
             </div>
           ) : (
-            <div className="flex flex-1 flex-col items-center pt-[8vh] text-center">
+            <div className="flex flex-1 flex-col items-center pb-6 pt-[10vh] text-center">
               <h1 className="text-[26px] font-semibold tracking-tight">想画点什么？</h1>
-              <div className="mt-6 w-full text-left">{composer}</div>
               {items.length ? (
-                <div className="mt-10 w-full text-left">
+                <div className="mt-8 w-full text-left">
                   <div className="mb-3 flex items-center justify-between text-[13px] text-muted-foreground">
                     <span>最近作品</span>
                     <a href="#/gallery" className="transition-colors hover:text-foreground">查看全部</a>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-                    {items.slice(0, 6).map((item) => (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {items.slice(0, 8).map((item) => (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => setLightbox(item)}
                         className="group overflow-hidden rounded-xl ring-1 ring-border transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
                       >
-                        <FanThumb item={item} large={false} />
+                        <FanThumb item={item} large />
                       </button>
                     ))}
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">生成的图片和进度会显示在这里。</p>
+              )}
             </div>
           )}
 
-          {hasTurns ? composer : null}
+          {composer}
         </div>
       )}
 
