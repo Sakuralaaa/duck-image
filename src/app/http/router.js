@@ -83,7 +83,9 @@ export async function handleHealthz(ctx, deps) {
 
 export function handleRoot(ctx, { version, config }) {
   requireMethod(ctx, ['GET', 'HEAD'], 'GET, HEAD');
-  ctx.text(200, renderIntroPage({ version, config }), 'text/html; charset=utf-8');
+  // Duck Image：根路径直接进管理台（登录页），不再展示 API 介绍页。
+  void version; void config;
+  ctx.head(302, { location: '/admin/' });
 }
 
 export function handleFavicon(ctx) {
