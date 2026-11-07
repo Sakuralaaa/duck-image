@@ -86,6 +86,8 @@ API：
 
 ## 5. 会话式连接测试（替代单次测试）
 
+连接测试和会话历史共用消息展示：助手正文按 Markdown 渲染，支持表格、列表、代码和链接；Duck.ai 的引用标签显示为编号，搜索来源仍列在回复下方。用户和助手消息均不显示头像，消息内容和附件不会因展示格式而改写。
+
 ### 5.1 数据结构
 
 `data/testsessions.json`：
@@ -1627,7 +1629,7 @@ Marker 文本（role=user，位于旧历史之后、新 user 之前）：
 
 ## 47. Authoritative session（v2.59，BREAKING）
 
-网关拥有会话 canonical/upstream/history，客户端只提供 **session id + 新输入**（完整历史仅用于 diff）。旧「客户端回放为主」语义已删除。
+网关维护会话 canonical/upstream/history，客户端可提供 **session id + 新输入**，也可回放历史。回放冲突且具备重建条件时，以客户端回放建立新 epoch，替换该 session 的当前服务端状态。
 
 ### 47.1 conversation_state 字段
 
@@ -1643,7 +1645,7 @@ Marker 文本（role=user，位于旧历史之后、新 user 之前）：
 - diff：
   - incoming 以 client 为前缀 → `new=suffix`；
   - incoming 更短（只发最新 user/tool output）→ 全部视为 new（delta 模式）；
-  - 同长/更长但前缀冲突 → **409 `session_history_mismatch`**（不静默重建）；
+  - 历史前缀冲突时，若客户端提供从 user 开始、含 assistant 且以新输入结束的回放，则按该回放重建并递增 epoch；旧摘要、PDF 和图片状态不沿用。不足以重建的冲突仍返回 **409 `session_history_mismatch`**；
   - 显式 fork：`X-Session-Epoch` / body `session_epoch`（或 `fork:true`）→ 丢弃旧 canonical，epoch+1。
 - `canonical = 旧 canonical + new`；assistant（文本/tool_calls/images）追加 canonical；history 来自 canonical。
 - `upstream_json` 为精确 duck 消息快照；普通轮次只 append 新消息转换结果；compression/auto spill/system/tools 变化才允许前缀变化并 epoch+1。
@@ -1653,4 +1655,9 @@ Marker 文本（role=user，位于旧历史之后、新 user 之前）：
 - 无 session 自动生成 `auto:<hash>` 并回写 `X-Session-Id`；同时回写 `X-Session-Epoch`。
 - `/v1/responses` `store:false` 也保存 conversation_state；`store` 只控制 responses 表/previous_response_id。
 - 保留 PDF/图片/手动 marker：数据源改 canonical；手动 marker/compact、自动 PDF 溢出创建新 epoch，跨 epoch 禁止拼接。
-- 错误码：authoritative 冲突 `409 session_history_mismatch`；旧 chat server 模式 `conversation_session_conflict` 仅在显式 server-mode 兼容路径保留。
+- 错误码：无法重建的 authoritative 冲突 `409 session_history_mismatch`；旧 chat server 模式 `conversation_session_conflict` 仅在显式 server-mode 兼容路径保留。
+
+### 第三方客户端的搜索来源和生图模型
+
+- Chat Completions 与 Responses 在有可用搜索结果时，除保留结构化注解外，还在回答正文末尾输出 HTTP(S) 来源链接，兼容只显示文本的客户端。流式和非流式均适用。
+- `/v1/models` 暴露生图入口 `image2.5`；`/v1/images/generations`、`/v1/images/edits` 以及管理台生图默认使用该入口，实际通过 `gpt-6-luna` 调用上游图片生成工具。对话接口继续使用对话模型。

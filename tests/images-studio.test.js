@@ -44,10 +44,12 @@ test('/v1/images/edits：JSON data URL 参考图透传为 images，拒绝远程 
   await withServer({ duck, config: makeConfig({}) }, async ({ baseUrl }) => {
     const ok = await v1Request(baseUrl, '/v1/images/edits', {
       method: 'POST',
-      body: { prompt: '把背景换成星空', image: PNG_DATA_URL }
+      body: { model: 'image2.5', prompt: '把背景换成星空', image: PNG_DATA_URL }
     });
     assert.equal(ok.status, 200, ok.text);
+    assert.equal(ok.json.model, 'image2.5');
     const params = duck.calls.imageGeneration[0].params;
+    assert.equal(params.model, 'gpt-6-luna');
     assert.equal(params.images.length, 1);
     assert.equal(params.images[0].format, 'png');
 
@@ -109,6 +111,8 @@ test('管理台：生成 → 列表 → 取文件 → 收藏 → 删除 → 清�
       body: { prompt: '赛博朋克风的鸭子', n: 2, aspect: '3:4', references: [PNG_DATA_URL] }
     });
     assert.equal(gen.status, 200, gen.text);
+    assert.equal(gen.json.model, 'image2.5');
+    assert.equal(duck.calls.imageGeneration[0].params.model, 'gpt-6-luna');
     assert.equal(gen.json.images.length, 2);
     assert.ok(gen.json.images[0].dataUrl.startsWith('data:image/png;base64,'));
     assert.equal(gen.json.images[0].saved, true);

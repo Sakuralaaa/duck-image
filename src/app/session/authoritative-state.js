@@ -28,6 +28,7 @@ export function replaySessionImagesFromState(messages, conversationState) {
  *   body: object,
  *   state: object|null,
  *   incoming: any[],
+ *   forkIncoming?: any[],
  *   kind: 'chat'|'responses',
  *   manualCompaction: object|null,
  *   ephemeralRequest?: boolean
@@ -39,18 +40,23 @@ export function prepareAuthoritativeSessionDiff({
   body,
   state,
   incoming,
+  forkIncoming,
   kind,
   manualCompaction,
   ephemeralRequest = false
 }) {
   if (manualCompaction || !state || ephemeralRequest) return null;
   const epochFlags = resolveEpochFlags(ctx, body);
-  const diff = diffSession({
+  let diff = diffSession({
     state,
     incoming,
     requestedEpoch: epochFlags.requestedEpoch,
     fork: epochFlags.fork
   });
+  // 新 epoch 必须使用客户端原始回放，不能带入旧会话补回的图片。
+  if (diff.mode === 'fork' && Array.isArray(forkIncoming)) {
+    diff = diffSession({ state, incoming: forkIncoming, requestedEpoch: diff.epoch, fork: true });
+  }
   if (diff.mode === 'noop') {
     throw badRequest(
       kind === 'chat' ? 'no new messages for this session' : 'no new input for this session',

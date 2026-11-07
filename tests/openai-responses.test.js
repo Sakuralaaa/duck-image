@@ -102,7 +102,8 @@ test('非流式：input 消息数组 + reasoning.effort + tools web_search 注�
 
     const messageItem = res.json.output.find((item) => item.type === 'message');
     const part = messageItem.content[0];
-    assert.equal(part.text, '纽约今天约12°C');
+    assert.ok(part.text.startsWith('纽约今天约12°C'));
+    assert.ok(part.text.includes(DEFAULT_SOURCES[0].url));
     assert.equal(part.annotations.length, 2);
     assert.equal(part.annotations[0].type, 'url_citation');
     assert.equal(part.annotations[0].url_citation.url, DEFAULT_SOURCES[0].url);
@@ -233,6 +234,9 @@ test('流式：web_search → output_text.annotation.added（url_citation）+ co
 
     const completed = payloads.at(-1).response;
     assert.equal(completed.annotations.length, 2);
+    const text = payloads.filter((payload) => payload.type === 'response.output_text.delta').map((payload) => payload.delta).join('');
+    assert.ok(text.includes(DEFAULT_SOURCES[0].url));
+    assert.equal(text, completed.output_text);
     const part = completed.output.find((item) => item.type === 'message').content[0];
     assert.equal(part.annotations.length, 2);
 

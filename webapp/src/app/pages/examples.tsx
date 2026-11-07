@@ -45,7 +45,7 @@ function buildExample(tab: ExampleTab, origin: string): string {
       `curl ${base}/images/generations \\`,
       '  -H "Content-Type: application/json" \\',
       `  -H "Authorization: Bearer ${API_KEY_PLACEHOLDER}" \\`,
-      `  -d '{"model":"gpt-6-luna","prompt":"一只戴墨镜的橘猫，扁平插画风"}'`
+      `  -d '{"model":"image2.5","prompt":"一只戴墨镜的橘猫，扁平插画风"}'`
     ].join('\n');
   }
   if (tab === 'python') {
@@ -81,7 +81,7 @@ function buildExample(tab: ExampleTab, origin: string): string {
       '',
       '# 图片生成（b64_json）',
       'image = client.images.generate(',
-      '    model="gpt-6-luna",',
+      '    model="image2.5",',
       '    prompt="一只戴墨镜的橘猫，扁平插画风",',
       '    response_format="b64_json",',
       ')',
@@ -119,7 +119,7 @@ function buildExample(tab: ExampleTab, origin: string): string {
       '',
       '// 图片生成',
       'const image = await client.images.generate({',
-      '  model: "gpt-6-luna",',
+      '  model: "image2.5",',
       '  prompt: "一只戴墨镜的橘猫，扁平插画风",',
       '  response_format: "b64_json"',
       '});',

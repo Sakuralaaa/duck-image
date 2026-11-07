@@ -23,8 +23,21 @@ import {
 } from './helpers/test-server.js';
 import { MockDuckClient, DEFAULT_SOURCES, PNG_1X1_B64 } from './helpers/mock-duck.js';
 import { DuckError } from '../src/duck/index.js';
+import { formatSourceLinks } from '../src/openai/chat.js';
 
 const ADMIN = {};
+
+test('来源正文只包含安全的 HTTP(S) 链接，标题中的 Markdown 符号会转义', () => {
+  const text = formatSourceLinks([
+    { title: '标题 [测试]', url: 'https://example.com/a' },
+    { title: '恶意', url: 'javascript:alert(1)' },
+    { title: '凭据', url: 'https://user:password@example.com/' }
+  ]);
+  assert.ok(text.includes('https://example.com/a'));
+  assert.ok(text.includes('\\[测试\\]'));
+  assert.ok(!text.includes('javascript:'));
+  assert.ok(!text.includes('password'));
+});
 
 function newDuck(chat = {}) {
   const duck = new MockDuckClient();
@@ -198,6 +211,8 @@ test('联网搜索：tools:[{type:"web_search"}] → 触发上游 + url_citation
     assert.equal(duck.calls.chat[0].params.imageGeneration, false);
 
     const message = res.json.choices[0].message;
+    assert.ok(message.content.includes(DEFAULT_SOURCES[0].url), '只显示正文的客户端也应收到来源链接');
+    assert.ok(message.content.includes(DEFAULT_SOURCES[1].url));
     assert.ok(Array.isArray(message.annotations));
     assert.equal(message.annotations.length, 2);
     assert.deepEqual(message.annotations[0], {
@@ -312,6 +327,9 @@ test('流式：搜索注解/图片以 delta 帧下发，include_usage 追加 usa
     const annotation = annotationChunk.choices[0].delta.annotations[0];
     assert.equal(annotation.type, 'url_citation');
     assert.equal(annotation.url_citation.url, DEFAULT_SOURCES[0].url);
+    const content = objects.map((chunk) => chunk.choices?.[0]?.delta?.content || '').join('');
+    assert.ok(content.includes(DEFAULT_SOURCES[0].url));
+    assert.ok(content.includes(DEFAULT_SOURCES[1].url));
 
     const imageChunk = objects.find((chunk) => chunk.choices?.[0]?.delta?.images);
     assert.ok(imageChunk, 'missing images delta chunk');

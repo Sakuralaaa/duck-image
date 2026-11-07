@@ -484,7 +484,7 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
   const [prompt, setPrompt] = useState('');
   const [aspect, setAspect] = useState('auto');
   const [count, setCount] = useState(1);
-  const [model, setModel] = useState('');
+  const [model, setModel] = useState('image2.5');
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [references, setReferences] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -514,8 +514,11 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
   const [pendingDelete, setPendingDelete] = useState<GalleryItem | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const imageModels = useMemo(
-    () => models.filter((entry) => Array.isArray(entry.tools) && entry.tools.includes('image_generation')),
+  const imageModels = useMemo<ModelInfo[]>(
+    () => [
+      { id: 'image2.5', display_name: 'image2.5', paid: false, available: true, reasoning: false, tools: ['image_generation'] },
+      ...models.filter((entry) => Array.isArray(entry.tools) && entry.tools.includes('image_generation'))
+    ],
     [models]
   );
 
@@ -525,9 +528,6 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
         const response = await apiGet<{ items: ModelInfo[] }>('/models');
         const list = Array.isArray(response?.items) ? response.items : [];
         setModels(list);
-        const usable = list.filter((entry) => entry.tools?.includes('image_generation') && entry.available !== false);
-        const preferred = usable.find((entry) => entry.default) || usable.find((entry) => !entry.paid) || usable[0];
-        if (preferred) setModel((current) => current || preferred.id);
       } catch (error) {
         if (!(error as ApiError)?.handled) toast.error((error as Error).message || '模型列表加载失败');
       }
@@ -699,7 +699,7 @@ export function ImagesPage({ initialView = 'create' }: { initialView?: 'create' 
   const reuse = useCallback((item: GalleryItem) => {
     setPrompt(item.prompt);
     if (item.aspect) setAspect(item.aspect);
-    if (item.model) setModel(item.model);
+    if (item.model) setModel(item.model === 'gpt-6-luna' ? 'image2.5' : item.model);
     setLightbox(null);
     setView('create');
     window.setTimeout(() => textareaRef.current?.focus(), 50);

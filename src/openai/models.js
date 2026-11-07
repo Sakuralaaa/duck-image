@@ -14,6 +14,8 @@ import { isCompactionSupportedModel } from './compact.js';
 export const MODEL_CREATED_AT = 1735689600; // 2025-01-01, stable "created" for /v1/models
 export const TOOL_WEB_SEARCH = 'web_search';
 export const TOOL_IMAGE_GENERATION = 'image_generation';
+export const IMAGE_MODEL_ID = 'image2.5';
+export const IMAGE_MODEL_BACKEND = 'gpt-6-luna';
 
 /** Free / paid (Plus/Pro) duck.ai models — v2 contract, docs/ADMIN_API_V2.md §4. */
 export const FREE_MODEL_IDS = Object.freeze([
@@ -714,6 +716,27 @@ export function listModelsPayload(config) {
     pushEntry(entry.id, effective);
     pushEntry(`duck-${entry.id}`, effective, entry.id);
   }
+
+  // 这是网关提供的生图入口，底层调用 Luna 的 GenerateImage 工具，
+  // 不把它加入对话模型目录或伪装成上游原生模型。
+  entries.push({
+    id: IMAGE_MODEL_ID,
+    object: 'model',
+    created: MODEL_CREATED_AT,
+    owned_by: 'duck.ai',
+    name: IMAGE_MODEL_ID,
+    display_name: IMAGE_MODEL_ID,
+    model_type: 'image',
+    available: config?.tools?.imageGeneration !== false,
+    paid: false,
+    tier: 'free',
+    requires_subscription: false,
+    tools: [TOOL_IMAGE_GENERATION],
+    capabilities: { imageGeneration: true },
+    endpoints: ['/v1/images/generations', '/v1/images/edits'],
+    backend_model: IMAGE_MODEL_BACKEND,
+    default: false
+  });
 
   return {
     object: 'list',

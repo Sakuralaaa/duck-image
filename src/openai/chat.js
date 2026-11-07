@@ -593,6 +593,24 @@ export function mergeSources(...lists) {
   return [...byUrl.values()].slice(0, MAX_SOURCES);
 }
 
+/** 兼容只显示正文的客户端；不输出非 HTTP 链接或把标题当作 Markdown。 */
+export function formatSourceLinks(sources) {
+  const links = [];
+  for (const source of sources || []) {
+    try {
+      const url = new URL(source.url);
+      if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) continue;
+      const title = String(source.title || url.hostname)
+        .replace(/[\r\n\t]+/g, ' ')
+        .replace(/[\\`*_{}\[\]<>]/g, '\\$&');
+      links.push(`- [${title}](<${url.href.replace(/>/g, '%3E')}>)`);
+    } catch {
+      // 无效来源不写入正文。
+    }
+  }
+  return links.length ? `\n\n**搜索来源**\n${links.join('\n')}` : '';
+}
+
 /** OpenAI `url_citation` annotations from normalized sources. */
 export function buildAnnotations(sources) {
   return sources
@@ -806,7 +824,7 @@ export async function handleChatCompletions(req, res, ctx) {
   ctx.historySessionKey = ctx.sessionKey || ctx.conversationKey || conversationSessionKey;
   let sessionStateRepaired = false;
   let manualCompaction = null;
-  const conversationState = await loadAuthoritativeState({ responseStore, conversationSessionKey });
+  let conversationState = await loadAuthoritativeState({ responseStore, conversationSessionKey });
   // v2.58：客户端只回放占位文本时，从 session 状态恢复真实图片。
   messages.conversation = replaySessionImagesFromState(messages.conversation, conversationState);
   if (manualMarker) {
@@ -840,6 +858,9 @@ export async function handleChatCompletions(req, res, ctx) {
       body,
       state: conversationState,
       incoming: clientIncoming,
+      forkIncoming: rawRequestMessages.filter(
+        (message) => message && !['system', 'developer'].includes(String(message.role || '').toLowerCase())
+      ),
       kind: 'chat',
       manualCompaction,
       ephemeralRequest
@@ -857,6 +878,7 @@ export async function handleChatCompletions(req, res, ctx) {
       });
       messages.promptChars = fullCanonical.promptChars;
       sessionStateRepaired = applySessionLogFields(ctx.log, authoritativeDiff);
+      if (authoritativeDiff.mode === 'fork') conversationState = null;
     } else if (manualCompaction) {
       const { sessionEpoch, sessionMode } = resolveManualCompactionEpoch({ conversationState, manualCompaction });
       ctx.log.sessionEpoch = sessionEpoch;
@@ -1381,6 +1403,7 @@ async function resolveChatCompletion(ctx, params) {
     typeof result?.reasoning === 'string' && result.reasoning ? result.reasoning : collected.reasoning
   );
   const sources = mergeSources(collected.sources, result?.sources);
+  if (!toolCalls.length) content += formatSourceLinks(sources);
   const images = mergeImages(collected.images, result?.images);
   const finishReason = toolCalls.length ? 'tool_calls' : result?.finishReason || collected.finishReason;
   const usage = buildEstimatedUsage({
@@ -1740,6 +1763,12 @@ async function streamChatCompletion(ctx, params) {
     collected.images = mergeImages(collected.images, result?.images);
     sendNewAnnotations();
     sendNewImages();
+
+    const sourceLinks = formatSourceLinks(collected.sources);
+    if (sourceLinks) {
+      collected.content += sourceLinks;
+      emitDelta({ content: sourceLinks });
+    }
 
     const finishReason = normalizeFinishReason(result?.finishReason || collected.finishReason);
   // v2.31：写入会话历史（流式）

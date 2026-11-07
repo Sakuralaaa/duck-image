@@ -81,17 +81,19 @@ docker compose up -d
 # 文生图（size 会换算成画幅提示）
 curl http://127.0.0.1:8787/v1/images/generations \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
-  -d '{"prompt":"黄昏海边的灯塔，水彩","size":"1792x1024","n":1}'
+  -d '{"model":"image2.5","prompt":"黄昏海边的灯塔，水彩","size":"1792x1024","n":1}'
 
 # 参考图改图（OpenAI multipart 形态）
 curl http://127.0.0.1:8787/v1/images/edits -H "Authorization: Bearer $KEY" \
-  -F prompt="把背景换成星空" -F "image[]=@cat.png"
+  -F model="image2.5" -F prompt="把背景换成星空" -F "image[]=@cat.png"
 
 # 联网搜索对话
 curl http://127.0.0.1:8787/v1/chat/completions \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -d '{"model":"gpt-6-luna","web_search":true,"messages":[{"role":"user","content":"今天东京天气怎么样？"}]}'
 ```
+
+**生图模型**：`image2.5` 是网关提供的生图入口，默认使用 `gpt-6-luna` 调用 duck.ai 的 `GenerateImage` 工具；省略生图模型时也使用此入口。它用于图片生成和编辑接口，对话接口仍使用对话模型。
 
 **关于参数**：duck.ai 网页端的生图（Create Image，结果标注 GPT Image 2.5）只接受「提示词 + 参考图」，没有尺寸、张数、风格、质量这些开关，一次一张。所以 Duck Image 把画幅写进提示词（尽力而为，不是原生尺寸），`n>1` 是顺序多次生成；中途失败会返回已生成的部分并标记 `partial`。
 

@@ -4,7 +4,7 @@
  * BREAK：客户端只提供 session id + 新输入；网关维护 canonical，旧历史只用于 diff。
  * - chat：full replay 只 append 新 user；只发最新 user 也 append；assistant 写回 canonical。
  * - responses：同 session delta/full + previous_response_id append，不重复。
- * - 冲突 → 409 `session_history_mismatch`；显式 fork/epoch 可重建。
+ * - 完整回放冲突时自动建立新 epoch；不完整冲突仍返回 409。
  * - history 来自 canonical，不丢旧消息/图片/工具；普通轮次 upstream 前缀稳定。
  * - 旧 conversation_state（无 client_json）初始化不炸。
  * 全程 mock DuckClient，不访问真实 duck.ai。
@@ -16,8 +16,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { startTestServer, v1Request, adminRequest, makeConfig } from './helpers/test-server.js';
-import { MockDuckClient, PNG_1X1_B64 } from './helpers/mock-duck.js';
+import { startTestServer, v1Request, adminRequest, makeConfig, collectSSE } from './helpers/test-server.js';
+import { MockDuckClient, PNG_1X1_B64, DEFAULT_SOURCES } from './helpers/mock-duck.js';
 import { createResponseStore } from '../src/openai/responses-store.js';
 import { createHistoryStore } from '../src/history.js';
 import { createNullLogger } from '../src/logger.js';
@@ -132,6 +132,84 @@ test('chat delta：只发最新 user 也能 append 到 canonical，不重建旧�
   }
 });
 
+test('搜索结果正文带链接，客户端原样回放后能继续同一会话', async () => {
+  const env = await setup();
+  const sessionKey = 'sess-qa-search-links';
+  try {
+    env.duck.enqueueChat({ textDeltas: ['搜索回答'], sources: DEFAULT_SOURCES });
+    env.duck.enqueueChat({ textDeltas: ['继续回答'] });
+    const first = await chatTurn(env, sessionKey, { messages: [{ role: 'user', content: '搜索新闻' }], web_search: true });
+    assert.equal(first.status, 200, first.text);
+    const answer = first.json.choices[0].message.content;
+    assert.ok(answer.includes(DEFAULT_SOURCES[0].url));
+    const second = await chatTurn(env, sessionKey, { messages: [
+      { role: 'user', content: '搜索新闻' },
+      { role: 'assistant', content: answer },
+      { role: 'user', content: '继续' }
+    ] });
+    assert.equal(second.status, 200, second.text);
+    assert.equal(Number(second.headers.get('x-session-epoch')), 0);
+    const state = await env.responsesStore.getConversation(sessionKey);
+    assert.equal(state.canonical.filter((message) => message.role === 'user').length, 2);
+  } finally {
+    await env.cleanup();
+  }
+});
+
+test('流式搜索返回来源后，客户端回放正文能继续同一会话', async () => {
+  const env = await setup();
+  const sessionKey = 'sess-qa-stream-search-links';
+  try {
+    env.duck.enqueueChat({ textDeltas: ['搜索回答'], sources: DEFAULT_SOURCES });
+    env.duck.enqueueChat({ textDeltas: ['继续回答'] });
+    const { response, events } = await collectSSE(env.baseUrl, '/v1/chat/completions', {
+      headers: { 'x-session-id': sessionKey },
+      body: { model: 'gpt-6-luna', stream: true, web_search: true, messages: [{ role: 'user', content: '搜索新闻' }] }
+    });
+    assert.equal(response.status, 200);
+    const answer = events.map((event) => event.json?.choices?.[0]?.delta?.content || '').join('');
+    assert.ok(answer.includes(DEFAULT_SOURCES[0].url));
+    const second = await chatTurn(env, sessionKey, { messages: [
+      { role: 'user', content: '搜索新闻' },
+      { role: 'assistant', content: answer },
+      { role: 'user', content: '继续' }
+    ] });
+    assert.equal(second.status, 200, second.text);
+    assert.equal(Number(second.headers.get('x-session-epoch')), 0);
+  } finally {
+    await env.cleanup();
+  }
+});
+
+test('Responses 回放历史发生冲突时使用客户端历史重建', async () => {
+  const env = await setup();
+  const sessionKey = 'sess-qa-responses-fork';
+  try {
+    env.duck.enqueueChat({ textDeltas: ['原回答'] });
+    env.duck.enqueueChat({ textDeltas: ['新回答'] });
+    const first = await v1Request(env.baseUrl, '/v1/responses', {
+      method: 'POST', headers: { 'x-session-id': sessionKey },
+      body: { model: 'gpt-6-luna', input: '原问题' }
+    });
+    assert.equal(first.status, 200, first.text);
+    const second = await v1Request(env.baseUrl, '/v1/responses', {
+      method: 'POST', headers: { 'x-session-id': sessionKey },
+      body: { model: 'gpt-6-luna', input: [
+        { role: 'user', content: '编辑后的问题' },
+        { role: 'assistant', content: '编辑后的回答' },
+        { role: 'user', content: '继续' }
+      ] }
+    });
+    assert.equal(second.status, 200, second.text);
+    assert.equal(Number(second.headers.get('x-session-epoch')), 1);
+    const upstream = JSON.stringify(env.duck.calls.chat.at(-1).params.messages);
+    assert.ok(upstream.includes('编辑后的问题'));
+    assert.ok(!upstream.includes('原问题'));
+  } finally {
+    await env.cleanup();
+  }
+});
+
 /* ------------------------------------------------------------------ */
 /* 3) responses：同 session delta/full + previous_response_id           */
 /* ------------------------------------------------------------------ */
@@ -189,15 +267,16 @@ test('responses previous_response_id + 同 session：delta 只 append 新 input'
 });
 
 /* ------------------------------------------------------------------ */
-/* 4) 冲突 → 409 session_history_mismatch；显式 fork 可重建             */
+/* 4) 冲突回放自动重建；显式 fork 仍可用                               */
 /* ------------------------------------------------------------------ */
 
-test('session 冲突：不匹配历史 → 409 session_history_mismatch；fork/epoch 可重建', async () => {
+test('session 冲突：完整回放自动建立新 epoch，后续回放不丢历史', async () => {
   const env = await setup();
   const sessionKey = 'sess-qa-auth-conflict';
   try {
     env.duck.enqueueChat({ textDeltas: ['原始回答'] });
     env.duck.enqueueChat({ textDeltas: ['冲突后回答'] });
+    env.duck.enqueueChat({ textDeltas: ['继续回答'] });
     env.duck.enqueueChat({ textDeltas: ['fork 后回答'] });
     const first = await chatTurn(env, sessionKey, { messages: [{ role: 'user', content: '原始问题' }] });
     assert.equal(first.status, 200, first.text);
@@ -209,15 +288,30 @@ test('session 冲突：不匹配历史 → 409 session_history_mismatch；fork/e
         { role: 'user', content: '新问题' }
       ]
     });
-    assert.equal(conflict.status, 409, conflict.text);
-    assert.equal(conflict.json.error.code, 'session_history_mismatch');
+    assert.equal(conflict.status, 200, conflict.text);
+    assert.equal(Number(conflict.headers.get('x-session-epoch')), 1);
+    const rebuilt = JSON.stringify(env.duck.calls.chat.at(-1).params.messages);
+    assert.ok(rebuilt.includes('完全不同的历史'));
+    assert.ok(!rebuilt.includes('原始问题'));
+    const next = await chatTurn(env, sessionKey, {
+      messages: [
+        { role: 'user', content: '完全不同的历史' },
+        { role: 'assistant', content: '不同回答' },
+        { role: 'user', content: '新问题' },
+        { role: 'assistant', content: '冲突后回答' },
+        { role: 'user', content: '继续提问' }
+      ]
+    });
+    assert.equal(next.status, 200, next.text);
+    assert.equal(Number(next.headers.get('x-session-epoch')), 1);
+    assert.ok(JSON.stringify(env.duck.calls.chat.at(-1).params.messages).includes('继续提问'));
 
     // 显式 fork：新的 epoch 允许重建
     const fork = await chatTurn(env, sessionKey, {
       messages: [{ role: 'user', content: 'fork 新会话问题' }]
     }, { 'x-session-fork': 'true' });
     assert.equal(fork.status, 200, fork.text);
-    assert.ok(Number(fork.headers.get('x-session-epoch')) >= 1, 'fork 后 epoch 应递增');
+    assert.ok(Number(fork.headers.get('x-session-epoch')) >= 2, 'fork 后 epoch 应递增');
     const state = await env.responsesStore.getConversation(sessionKey);
     const users = (state.canonical || []).filter((message) => message.role === 'user').map((message) => message.content);
     assert.deepEqual(users, ['fork 新会话问题'], 'fork 后 canonical 应重建');

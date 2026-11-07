@@ -2,7 +2,7 @@
  * v2.59：网关 authoritative session 层。
  *
  * 客户端只提供 session id + 新输入；旧完整输入仅用于 diff。网关保存 canonical，
- * 后续轮次 append-only；冲突返回 409 `session_history_mismatch`，显式 epoch/fork 才允许重建。
+ * 后续轮次 append-only；客户端回放发生冲突时，以完整回放建立新 epoch。
  */
 
 import crypto from 'node:crypto';
@@ -146,7 +146,7 @@ export function diffSession({ state = null, incoming = [], requestedEpoch = null
     return { canonical: rawIncoming, newMessages: rawIncoming, clientView: incomingView, epoch: 0, mode: 'new', appended: incomingView.length };
   }
   const stateEpoch = Number.isFinite(state.epoch) ? state.epoch : 0;
-  const explicitEpoch = Number.isFinite(Number(requestedEpoch)) ? Math.trunc(Number(requestedEpoch)) : null;
+  const explicitEpoch = requestedEpoch != null && Number.isFinite(Number(requestedEpoch)) ? Math.trunc(Number(requestedEpoch)) : null;
   if (fork === true || (explicitEpoch != null && explicitEpoch !== stateEpoch)) {
     return {
       canonical: rawIncoming,
@@ -166,22 +166,23 @@ export function diffSession({ state = null, incoming = [], requestedEpoch = null
   let newRaw = rawIncoming;
   let newView = incomingView;
   let mode = 'append';
+  const canRebuildFromReplay = incomingView.length >= 2 && incomingView[0].role === 'user' &&
+    incomingView.some((message) => message.role === 'assistant') &&
+    ['user', 'tool', 'function'].includes(incomingView[incomingView.length - 1].role);
+  const forkFromReplay = () => ({
+    canonical: rawIncoming,
+    newMessages: rawIncoming,
+    clientView: incomingView,
+    epoch: stateEpoch + 1,
+    mode: 'fork',
+    appended: incomingView.length
+  });
   if (savedClient.length && incomingView.length >= savedClient.length) {
     if (!samePrefix(savedClient, incomingView)) {
-      const toolContinuation =
-        incomingView.some((message) => message.role === 'tool' || message.role === 'function') ||
-        (incomingView.length === savedClient.length + 1 && incomingView[incomingView.length - 1]?.role === 'tool');
-      if (toolContinuation && incomingView.length > savedClient.length) {
-        // 工具续轮：客户端可能回放 assistant tool_calls 的形态与规范化后的 client 视图不完全一致；
-        // 保留 canonical 前缀，仅 append 新的 tool 消息。
-        newView = incomingView.slice(savedClient.length);
-        newRaw = rawIncoming.slice(savedClient.length);
-        mode = 'append-tool';
-      } else {
-        throw new SessionHistoryMismatchError(
-          'session_history_mismatch: incoming history conflicts with the server canonical conversation; retry with the canonical history, session delta, or explicit fork/epoch'
-        );
-      }
+      if (canRebuildFromReplay) return forkFromReplay();
+      throw new SessionHistoryMismatchError(
+        'session_history_mismatch: incoming history conflicts with the server canonical conversation; retry with the canonical history, session delta, or explicit fork/epoch'
+      );
     } else {
       newView = incomingView.slice(savedClient.length);
       newRaw = rawIncoming.slice(savedClient.length);
@@ -194,6 +195,7 @@ export function diffSession({ state = null, incoming = [], requestedEpoch = null
       incomingView[0].role !== 'assistant' &&
       incomingView.every((message) => message.role === 'user' || message.role === 'tool' || message.role === 'function');
     if (!deltaOnly) {
+      if (canRebuildFromReplay) return forkFromReplay();
       throw new SessionHistoryMismatchError(
         'session_history_mismatch: short history that is not a pure delta conflicts with the server canonical conversation; send only the newest user/tool input'
       );

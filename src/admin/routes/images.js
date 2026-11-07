@@ -67,7 +67,7 @@ async function handleGenerate(ctx) {
     });
     ctx.json(200, {
       ok: true,
-      model: outcome.resolved.id,
+      model: outcome.resolved.publicId,
       modelDisplayName: outcome.images[0]?.modelDisplayName || null,
       aspect: outcome.aspect,
       elapsedMs: Date.now() - startedAt,

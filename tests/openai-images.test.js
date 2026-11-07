@@ -12,6 +12,27 @@ import { DuckError } from '../src/duck/index.js';
 
 const ADMIN = {};
 
+test('image2.5 在模型列表可发现，生图默认和显式请求均路由到 Luna', async () => {
+  const duck = new MockDuckClient();
+  const config = makeConfig({ duck: { defaultModel: 'claude-haiku-5-5' } });
+  await withServer({ duck, config }, async ({ baseUrl }) => {
+    const models = await v1Request(baseUrl, '/v1/models');
+    const imageModel = models.json.data.find((entry) => entry.id === 'image2.5');
+    assert.equal(imageModel.model_type, 'image');
+    assert.equal(imageModel.backend_model, 'gpt-6-luna');
+    const details = await v1Request(baseUrl, '/v1/models/image2.5');
+    assert.equal(details.status, 200);
+    for (const model of [undefined, 'image2.5']) {
+      const res = await v1Request(baseUrl, '/v1/images/generations', {
+        method: 'POST', body: { prompt: '画鸭子', ...(model ? { model } : {}) }
+      });
+      assert.equal(res.status, 200, res.text);
+      assert.equal(res.json.model, 'image2.5');
+    }
+    assert.deepEqual(duck.calls.imageGeneration.map((call) => call.params.model), ['gpt-6-luna', 'gpt-6-luna']);
+  });
+});
+
 test('b64_json（默认）：data[0].b64_json 可解码为 PNG，模型与 prompt 透传', async () => {
   const duck = new MockDuckClient();
   await withServer({ duck, config: makeConfig({ ...ADMIN }) }, async ({ baseUrl }) => {

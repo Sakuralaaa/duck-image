@@ -24,6 +24,7 @@ import {
   mergeImages,
   normalizeImage,
   buildAnnotations,
+  formatSourceLinks,
   cleanCitationText,
   createCitationFilter,
   createFirstEventGate,
@@ -434,7 +435,7 @@ export async function handleResponses(req, res, ctx) {
     conversation: chainedConversation,
     marker: manualMarker
   });
-  const conversationState = await loadAuthoritativeState({ responseStore, conversationSessionKey });
+  let conversationState = await loadAuthoritativeState({ responseStore, conversationSessionKey });
   let replayedInputConversation = input.conversation;
   // v2.58：客户端只回放图片占位文本时，用 session 保存的真实图片补回上下文。
   if (conversationState?.images?.length) {
@@ -461,6 +462,7 @@ export async function handleResponses(req, res, ctx) {
     body,
     state: conversationState,
     incoming: replayedInputConversation,
+    forkIncoming: input.conversation,
     kind: 'responses',
     manualCompaction,
     ephemeralRequest
@@ -486,6 +488,7 @@ export async function handleResponses(req, res, ctx) {
       chainedConversation = [...oldCanonical, ...newMessages];
     }
     const stateRepaired = applySessionLogFields(ctx.log, authoritativeDiff);
+    if (authoritativeDiff.mode === 'fork') conversationState = null;
     if (stateRepaired) {
       previousRecord = null;
       chainedConversation = authoritativeDiff.canonical;
@@ -823,6 +826,7 @@ async function collectResponse(ctx, params) {
     typeof result?.reasoning === 'string' && result.reasoning ? result.reasoning : collected.reasoning
   );
   const sources = mergeSources(collected.sources, result?.sources);
+  if (!toolCalls.length) content += formatSourceLinks(sources);
   const images = mergeImages(collected.images, result?.images);
   return {
     content,
@@ -1478,6 +1482,20 @@ async function streamResponse(ctx, params) {
     sourcesStore.push(...finalSources);
     rebuildAnnotations();
     flushAnnotations();
+
+    const sourceLinks = formatSourceLinks(sourcesStore);
+    if (sourceLinks) {
+      const item = ensureMessageItem();
+      content += sourceLinks;
+      emit('response.output_text.delta', {
+        response_id: responseId,
+        item_id: item.id,
+        output_index: messageIndex,
+        content_index: 0,
+        delta: sourceLinks,
+        logprobs: []
+      });
+    }
 
     const addedImageB64 = new Set(
       outputItems

@@ -122,7 +122,10 @@ function buildFetchMock() {
         session: sessionSummary(),
         messages: [
           { id: 'm1', role: 'user', content: '历史问题' },
-          { id: 'm2', role: 'assistant', content: '历史回答' }
+          {
+            id: 'm2', role: 'assistant',
+            content: '### 历史回答\n\n**重点。 ** <citation src="1,3"></citation>\n\n| 时间 | 事件 |\n| --- | --- |\n| 今天 | 更新 |\n\n`<citation src="2"></citation>`\n\n[危险链接](javascript:alert(1))'
+          }
         ]
       });
     }
@@ -266,6 +269,16 @@ test('compact 前端：模型上下文行、手动压缩 loading/成功、summar
     // 选中会话
     await env.waitForText('会话A');
     env.clickText('会话A');
+    await env.waitForText('历史回答');
+    const reply = env.byTestId('chat-message-assistant');
+    assert.equal(reply.querySelector('h3')?.textContent, '历史回答');
+    assert.equal(reply.querySelector('strong')?.textContent, '重点。');
+    assert.equal(reply.querySelector('table tbody td')?.textContent, '今天');
+    assert.match(reply.textContent, /\[1\]\[3\]/);
+    assert.equal(reply.querySelector('code')?.textContent, '<citation src="2"></citation>');
+    assert.ok(!reply.querySelector('a[href^="javascript:"]'));
+    assert.equal(reply.querySelector('.lucide-bot'), null);
+    assert.equal(env.byTestId('chat-message-user').querySelector('.lucide-user'), null);
     await env.waitForTestId('compact-session');
     await env.waitForTestId('summary-badge');
     assert.match(env.byTestId('summary-badge').textContent || '', /已压缩 · 覆盖 3 条/, 'summary 徽章应显示覆盖条数');

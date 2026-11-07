@@ -15,7 +15,7 @@
  *   - url → { url: "data:image/<fmt>;base64,..." }（无公网存储，用 data URL）
  */
 
-import { resolveModel, modelSupportsTool } from './models.js';
+import { resolveModel, modelSupportsTool, IMAGE_MODEL_ID, IMAGE_MODEL_BACKEND } from './models.js';
 import { badRequest, genId, nowSec } from './errors.js';
 import { detectImageFormat, normalizeFormat, imageDataUri, imageMimeType } from '../duck/image-format.js';
 
@@ -23,13 +23,16 @@ export const ASPECT_RATIOS = Object.freeze(['1:1', '16:9', '9:16', '4:3', '3:4',
 const MAX_REFERENCE_IMAGES = 4;
 
 function resolveImageModel(config, requestedModel) {
-  // Image generation always targets a known duck.ai model; when omitted we use
-  // the configured default model (which supports GenerateImage on free tier).
-  const resolved = resolveModel(config, requestedModel);
+  // 生图默认走固定的 Luna 路由，不受对话默认模型的配置影响。
+  const useImageModel = requestedModel === undefined || requestedModel === null || requestedModel === '' || requestedModel === IMAGE_MODEL_ID;
+  const imageConfig = useImageModel
+    ? { ...config, models: { ...config?.models, aliases: { ...config?.models?.aliases, [IMAGE_MODEL_BACKEND]: IMAGE_MODEL_BACKEND } } }
+    : config;
+  const resolved = resolveModel(imageConfig, useImageModel ? IMAGE_MODEL_BACKEND : requestedModel);
   if (!modelSupportsTool(resolved.model, 'image_generation')) {
     throw badRequest(`Model "${resolved.id}" does not support image generation`, 'model', 'model_not_supported');
   }
-  return resolved;
+  return { ...resolved, publicId: useImageModel ? IMAGE_MODEL_ID : resolved.id };
 }
 
 function normalizeImages(result) {
@@ -248,7 +251,7 @@ function sendImagesResponse(ctx, outcome, responseFormat) {
     created: nowSec(),
     data,
     // Extensions useful for dashboards / debugging; ignored by OpenAI clients.
-    model: resolved.id,
+    model: resolved.publicId,
     ...(images[0]?.modelDisplayName ? { model_display_name: images[0].modelDisplayName } : {}),
     ...(outcome.aspect ? { aspect_ratio: outcome.aspect } : {}),
     ...(outcome.partialError ? { partial: true, partial_error: String(outcome.partialError.message || outcome.partialError) } : {}),

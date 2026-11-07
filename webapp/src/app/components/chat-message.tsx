@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Bot, ExternalLink, FileText, Loader2, RefreshCw, User, Wrench } from 'lucide-react';
+import { AlertTriangle, ExternalLink, FileText, Loader2, RefreshCw, Wrench } from 'lucide-react';
 import type { SessionMessage, ToolCallInfo } from '@/app/lib/types';
 import { dataUrlForImage, formatDateTime, formatDuration, formatQueueWait } from '@/app/lib/format';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ReasoningBlock } from './reasoning-block';
+import { MessageMarkdown } from './message-markdown';
 
 function safeHttpUrl(value: string | undefined | null): string | null {
   if (!value) return null;
@@ -180,7 +181,7 @@ export function ChatMessageBubble({
 
   if (message.role === 'user') {
     return (
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end" data-testid="chat-message-user">
         <div className="flex max-w-[85%] flex-col items-end gap-1">
           <div className="whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2.5 text-sm text-primary-foreground">
             {message.content}
@@ -191,9 +192,6 @@ export function ChatMessageBubble({
             ) : null}
           </div>
           <span className="pr-1 text-[11px] text-muted-foreground">{formatDateTime(message.ts)}</span>
-        </div>
-        <div className="mt-0.5 hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary sm:flex">
-          <User className="h-4 w-4" />
         </div>
       </div>
     );
@@ -206,11 +204,8 @@ export function ChatMessageBubble({
   const canRetry = Boolean(onRetry) && !retryBusy;
 
   return (
-    <div className="flex gap-2">
-      <div className="mt-0.5 hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary sm:flex">
-        <Bot className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 max-w-[95%] flex-1 space-y-2 rounded-2xl rounded-tl-sm border bg-card px-3.5 py-3 shadow-sm">
+    <div className="flex" data-testid="chat-message-assistant">
+      <div className="min-w-0 flex-1 space-y-2 rounded-2xl rounded-tl-sm border bg-card px-3.5 py-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">助手</span>
           {message.model ? (
@@ -254,8 +249,8 @@ export function ChatMessageBubble({
         ) : null}
 
         {message.content ? (
-          <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-            {message.content}
+          <div className="min-w-0 break-words text-sm leading-relaxed">
+            <MessageMarkdown content={message.content} />
             {streaming ? <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-primary align-middle" /> : null}
           </div>
         ) : null}
