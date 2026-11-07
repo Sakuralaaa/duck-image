@@ -1,18 +1,21 @@
 name: publish-docker-image
 
-# 手动发布「极简镜像」（Dockerfile：Alpine + musl 二进制）到 GHCR。
-# 旧版 Node 镜像 / release 包流水线已下线，本 workflow 是唯一的镜像发布入口。
+# 发布「极简镜像」（Dockerfile：Alpine + musl 二进制）到 GHCR：ghcr.io/<owner>/duckai-cpa
+#   - 推送 v* tag：自动构建并推送 :<tag> 与 :latest
+#   - 手动触发：填写 tag，可选是否同时推 :latest
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
-        description: "镜像 tag（如 v0.1.0；同时写入 APP_VERSION）"
+        description: "镜像 tag（如 v0.2.0；同时写入 APP_VERSION）"
         required: true
         type: string
       also_latest:
         description: "同时推送 :latest"
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -30,15 +33,24 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Validate version
+      - name: Resolve version / image
+        id: vars
         shell: bash
         env:
-          VERSION: ${{ inputs.version }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_LATEST: ${{ inputs.also_latest }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
         run: |
+          if [ "$EVENT" = "push" ]; then VERSION="$REF_NAME"; LATEST=true; else VERSION="$INPUT_VERSION"; LATEST="$INPUT_LATEST"; fi
           if [[ ! "$VERSION" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
-            echo "::error::invalid version '$VERSION' (Docker tag rules: letters/digits/._-), e.g. v0.1.0"
+            echo "::error::invalid version '$VERSION' (Docker tag rules: letters/digits/._-), e.g. v0.2.0"
             exit 1
           fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${REPO,,}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,10 +69,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/landminehq/duckai-cpa
+          images: ${{ steps.vars.outputs.image }}
           tags: |
-            type=raw,value=${{ inputs.version }}
-            type=raw,value=latest,enable=${{ inputs.also_latest }}
+            type=raw,value=${{ steps.vars.outputs.version }}
+            type=raw,value=latest,enable=${{ steps.vars.outputs.latest }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -71,24 +83,36 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
-            APP_VERSION=${{ inputs.version }}
-            INSTALL_CJK_FONTS=false
+            APP_VERSION=${{ steps.vars.outputs.version }}
+            INSTALL_CJK_FONTS=true
+
+      - name: Container smoke
+        shell: bash
+        env:
+          IMAGE: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker run -d --name smoke -p 8787:8787 "$IMAGE"
+          trap 'docker logs smoke || true; docker rm -f smoke || true' EXIT
+          for i in $(seq 1 60); do curl -fsS -m 3 http://127.0.0.1:8787/healthz >/dev/null 2>&1 && break; sleep 2; done
+          curl -fsS http://127.0.0.1:8787/healthz | grep -q '"ok":true'
+          curl -fsS http://127.0.0.1:8787/admin/ | grep -q '/admin/assets/'
+          echo "smoke PASS"
 
       - name: Summary
         shell: bash
         env:
-          VERSION: ${{ inputs.version }}
           TAGS: ${{ steps.meta.outputs.tags }}
+          IMAGE: ${{ steps.vars.outputs.image }}
+          VERSION: ${{ steps.vars.outputs.version }}
         run: |
           {
-            echo "### Minimal image published"
-            echo ""
-            echo "- version: \`$VERSION\`"
-            echo "- tags:"
+            echo "### Image published"
             echo '```'
             echo "$TAGS"
             echo '```'
-            echo "- base: \`alpine:3.20\` + musl single-file binary (no Node.js/node_modules)"
-            echo "- pull: \`docker pull ghcr.io/landminehq/duckai-cpa:$VERSION\`"
+            echo "- pull: \`docker pull $IMAGE:$VERSION\`"
           } >> "$GITHUB_STEP_SUMMARY"
