@@ -47,6 +47,10 @@ interface FormState {
   location: boolean;
   /** v2.44：客户端工具桥（Codex/DSH 文件工具） */
   clientFunctionCalling: boolean;
+  /** 生图图库 */
+  saveGallery: boolean;
+  galleryRetentionDays: string;
+  galleryMaxItems: string;
   logLevel: string;
 }
 
@@ -72,6 +76,9 @@ const DEFAULT_FORM: FormState = {
   imageGeneration: true,
   location: false,
   clientFunctionCalling: true,
+  saveGallery: true,
+  galleryRetentionDays: '0',
+  galleryMaxItems: '2000',
   logLevel: 'info'
 };
 
@@ -141,6 +148,9 @@ function formFromConfig(config: Config, _fallbackModel?: string): FormState {
     imageGeneration: config.tools?.imageGeneration !== false,
     location: config.tools?.location === true,
     clientFunctionCalling: config.tools?.clientFunctionCalling?.enabled !== false,
+    saveGallery: (config as { images?: { saveGallery?: boolean } }).images?.saveGallery !== false,
+    galleryRetentionDays: String((config as { images?: { retentionDays?: number } }).images?.retentionDays ?? 0),
+    galleryMaxItems: String((config as { images?: { maxItems?: number } }).images?.maxItems ?? 2000),
     logLevel: config.logging?.level || 'info'
   };
 }
@@ -252,6 +262,11 @@ export function SettingsPage() {
                     imageGeneration: form.imageGeneration,
                     location: form.location,
                     clientFunctionCalling: { enabled: form.clientFunctionCalling }
+                  },
+                  images: {
+                    saveGallery: form.saveGallery,
+                    retentionDays: Math.max(0, Math.trunc(Number(form.galleryRetentionDays) || 0)),
+                    maxItems: Math.max(0, Math.trunc(Number(form.galleryMaxItems) || 0))
                   }
                 }
               : { logging: { level: form.logLevel } };
@@ -673,6 +688,39 @@ export function SettingsPage() {
                   checked={form.imageGeneration}
                   onCheckedChange={(checked) => patch({ imageGeneration: checked })}
                 />
+              </div>
+              <div className="field space-y-3 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label htmlFor="settings-gallery-save">保存到图库 images.saveGallery</Label>
+                    <p className="text-[11px] text-muted-foreground">所有生成的图片写入 data/images，在「生图工作台」浏览；收藏的图不会被自动清理。</p>
+                  </div>
+                  <Switch
+                    id="settings-gallery-save"
+                    checked={form.saveGallery}
+                    onCheckedChange={(checked) => patch({ saveGallery: checked })}
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="settings-gallery-days" className="text-xs">保留天数（0 = 永久）</Label>
+                    <Input
+                      id="settings-gallery-days"
+                      inputMode="numeric"
+                      value={form.galleryRetentionDays}
+                      onChange={(event) => patch({ galleryRetentionDays: event.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="settings-gallery-max" className="text-xs">最多保留张数（0 = 不限）</Label>
+                    <Input
+                      id="settings-gallery-max"
+                      inputMode="numeric"
+                      value={form.galleryMaxItems}
+                      onChange={(event) => patch({ galleryMaxItems: event.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
               <Separator />
               <div className="flex items-center justify-between gap-3">

@@ -12,7 +12,9 @@ export function PageHeader({ title, description, actions, showQueue = true }: Pa
   return (
     <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
+        <h1 className="slant text-2xl font-extrabold sm:text-3xl">
+          <span className="bg-[linear-gradient(transparent_62%,hsl(var(--primary)/0.55)_62%)] px-0.5">{title}</span>
+        </h1>
         {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">

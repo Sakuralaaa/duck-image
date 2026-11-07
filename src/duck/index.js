@@ -1177,16 +1177,24 @@ export class DuckClient {
 
   /**
    * Generate an image through the same `/duckchat/v1/chat` endpoint using the `GenerateImage` tool.
-   * @param {{ prompt: string, model?: string, signal?: AbortSignal, extraHeaders?: Record<string, string> }} params
+   * @param {{ prompt: string, model?: string, aspect?: string, images?: Array<{ b64?: string, dataUrl?: string, format?: string, mimeType?: string }>, signal?: AbortSignal, extraHeaders?: Record<string, string> }} params
    * @returns {Promise<{ images: Array<{ b64: string, format: string }>, modelDisplayName?: string }>}
    */
   async imageGeneration(params = {}) {
     const prompt = String(params.prompt || '').trim();
     if (!prompt) throw new DuckError('prompt is required for imageGeneration', { status: 400, type: 'invalid_request', retriable: false });
+    // duck.ai 不接受尺寸参数：画幅只能作为一句提示交给模型（尽力而为）
+    const aspectHint =
+      typeof params.aspect === 'string' && params.aspect && params.aspect !== '1:1'
+        ? `\n\n(Image aspect ratio: ${params.aspect}. 画幅比例：${params.aspect})`
+        : '';
+    const references = Array.isArray(params.images) ? params.images.filter(Boolean) : [];
+    const userMessage = { role: 'user', content: `${prompt}${aspectHint}` };
+    if (references.length) userMessage.images = references;
     const result = await this.chat(
       {
         model: params.model || this.defaultModel,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [userMessage],
         imageGeneration: true,
         reasoningEffort: 'none',
         canShowGreeting: true,

@@ -3,9 +3,9 @@
 #
 #   docker compose -f docker-compose.ghcr.yml up -d
 #   # 或手动：
-#   docker pull ghcr.io/landminehq/duckai-cpa:latest
+#   docker pull ghcr.io/sakuralaaa/duckai-cpa:latest
 #   docker run -d --name duckai-cpa -p 8787:8787 \
-#     -v duckai-cpa-data:/data ghcr.io/landminehq/duckai-cpa:latest
+#     -v duckai-cpa-data:/data ghcr.io/sakuralaaa/duckai-cpa:latest
 #
 # 镜像由 .github/workflows/publish-docker-image.yml 手动发布（Dockerfile 极简镜像）。
 # 旧版 Node 镜像与 release 包流水线已下线；本 compose 仅使用新的二进制镜像。
@@ -13,7 +13,7 @@
 
 services:
   duckai-cpa:
-    image: ghcr.io/landminehq/duckai-cpa:${DUCKAI_CPA_VERSION:-latest}
+    image: ghcr.io/sakuralaaa/duckai-cpa:${DUCKAI_CPA_VERSION:-latest}
     container_name: duckai-cpa
     restart: unless-stopped
 

@@ -58,7 +58,7 @@
       </div>
       <pre><code>services:
   duckai-cpa:
-    image: ghcr.io/landminehq/duckai-cpa:latest
+    image: ghcr.io/sakuralaaa/duckai-cpa:latest
     ports: ["8787:8787"]
     volumes:
       - duckai-cpa-data:/data

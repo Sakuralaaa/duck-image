@@ -15,7 +15,7 @@
 镜像：
 
 ```text
-ghcr.io/landminehq/duckai-cpa:latest
+ghcr.io/sakuralaaa/duckai-cpa:latest
 ```
 
 - 基础镜像：Alpine 3.20 + musl 单文件二进制；
@@ -104,7 +104,7 @@ sudo systemctl enable --now duckai-cpa
 ## 源码开发
 
 ```bash
-git clone https://github.com/LandmineHQ/duckai-cpa.git
+git clone https://github.com/Sakuralaaa/duckai-cpa.git
 cd duckai-cpa
 npm install
 npm run build:web

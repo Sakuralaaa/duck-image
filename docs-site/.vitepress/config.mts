@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitepress'
 
-// GitHub Pages project site: https://landminehq.github.io/duckai-cpa/
+// GitHub Pages project site: https://sakuralaaa.github.io/duckai-cpa/
 // Override with DOCS_BASE=/ when deploying at a custom domain.
 const base = (process.env.DOCS_BASE || '/duckai-cpa/').replace(/\/?$/, '/')
 
@@ -35,7 +35,7 @@ export default defineConfig({
       { text: '参考', link: '/reference/configuration', activeMatch: '^/reference/' },
       {
         text: 'GitHub',
-        link: 'https://github.com/LandmineHQ/duckai-cpa'
+        link: 'https://github.com/Sakuralaaa/duckai-cpa'
       }
     ],
     sidebar: {
@@ -113,9 +113,9 @@ export default defineConfig({
       message: '仅供个人学习与私有部署；请遵守 duck.ai 的服务条款。',
       copyright: 'MIT Licensed · DuckAI CPA'
     },
-    socialLinks: [{ icon: 'github', link: 'https://github.com/LandmineHQ/duckai-cpa' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/Sakuralaaa/duckai-cpa' }],
     editLink: {
-      pattern: 'https://github.com/LandmineHQ/duckai-cpa/edit/main/docs-site/:path',
+      pattern: 'https://github.com/Sakuralaaa/duckai-cpa/edit/main/docs-site/:path',
       text: '在 GitHub 上编辑此页'
     }
   }

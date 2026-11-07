@@ -140,6 +140,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   },
   // v2.46：Responses API response chaining（previous_response_id）
   responses: { enabled: true, retentionDays: 7 },
+  // 生图图库：所有生成的图片落盘到 data/images（0 = 永久保留；maxItems 超出后清理最旧的非收藏图）
+  images: { saveGallery: true, retentionDays: 0, maxItems: 2000 },
   // v2.47：服务端会话模式（Chat Completions，需要 X-Session-Id）
   conversations: { mode: 'auto', retentionDays: 7 }
 });
@@ -209,6 +211,9 @@ export const ADMIN_EDITABLE_PATHS = Object.freeze([
   // v2.46：Responses API 响应链（previous_response_id）
   'responses.enabled',
   'responses.retentionDays',
+  'images.saveGallery',
+  'images.retentionDays',
+  'images.maxItems',
   'conversations.mode',
   'conversations.retentionDays'
 ]);
@@ -617,6 +622,17 @@ function normalizeConversationsConfig(raw = {}) {
   };
 }
 
+function normalizeImagesConfig(raw) {
+  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const days = Number(source.retentionDays);
+  const max = Number(source.maxItems);
+  return {
+    saveGallery: toBoolean(source.saveGallery, true),
+    retentionDays: Number.isInteger(days) && days >= 0 ? Math.min(3650, days) : 0,
+    maxItems: Number.isInteger(max) && max >= 0 ? Math.min(100000, max) : 2000
+  };
+}
+
 function normalizeResponsesConfig(raw = {}) {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const days = Number(source.retentionDays);
@@ -746,6 +762,7 @@ export function normalizeConfig(raw = {}) {
     },
     // v2.46：Responses API response chaining
     responses: normalizeResponsesConfig(source.responses),
+    images: normalizeImagesConfig(source.images),
     // v2.47：服务端会话（Chat Completions 需要显式 session id）
     conversations: normalizeConversationsConfig(source.conversations)
   };
@@ -813,6 +830,19 @@ function assertEditableValue(dotted, value) {
     case 'identity.sync.enabled':
       if (typeof value !== 'boolean') fail('boolean');
       return;
+    case 'images.saveGallery':
+      if (typeof value !== 'boolean') fail('boolean');
+      return;
+    case 'images.retentionDays': {
+      const days = Number(value);
+      if (!Number.isInteger(days) || days < 0 || days > 3650) fail('integer 0-3650');
+      return;
+    }
+    case 'images.maxItems': {
+      const count = Number(value);
+      if (!Number.isInteger(count) || count < 0 || count > 100000) fail('integer 0-100000');
+      return;
+    }
     case 'responses.retentionDays': {
       const days = Number(value);
       if (!Number.isInteger(days) || days < 0 || days > 365) fail('integer 0-365');

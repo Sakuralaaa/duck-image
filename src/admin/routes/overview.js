@@ -58,7 +58,15 @@ async function handleOverview(ctx) {
     tokens: typeof ctx.store.getUsage === 'function' ? ctx.store.getUsage() : null,
     logRetention: typeof ctx.store.getLogRetention === 'function' ? ctx.store.getLogRetention() : null,
     recentUpstream: ctx.store.getLogs({ kind: 'upstream', limit: 10 }).items,
-    recentAdmin: ctx.store.getLogs({ kind: 'admin', limit: 10 }).items
+    recentAdmin: ctx.store.getLogs({ kind: 'admin', limit: 10 }).items,
+    // 生图图库统计（概览「生图」卡片）
+    images: (() => {
+      try {
+        return ctx.gallery ? ctx.gallery.stats() : null;
+      } catch {
+        return null;
+      }
+    })()
   });
 }
 

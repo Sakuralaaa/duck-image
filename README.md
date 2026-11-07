@@ -8,11 +8,11 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![OpenAI Compatible](https://img.shields.io/badge/OpenAI-API%20Compatible-412991.svg?style=flat-square&logo=openai&logoColor=white)](https://platform.openai.com/docs/api-reference)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![build](https://github.com/LandmineHQ/duckai-cpa/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/LandmineHQ/duckai-cpa/actions/workflows/build.yml)
+[![ci](https://github.com/Sakuralaaa/duckai-cpa/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sakuralaaa/duckai-cpa/actions/workflows/ci.yml)
 
 *Use GPT-6, Claude, Mistral and open-source models from Duck.ai through one standard OpenAI interface — with streaming SSE, web search citations, image generation, multi-account routing and a self-hosted dashboard.*
 
-**Repository:** <https://github.com/LandmineHQ/duckai-cpa> · **Docs:** <https://landminehq.github.io/duckai-cpa/> · **Actions:** <https://github.com/LandmineHQ/duckai-cpa/actions>
+**Repository:** <https://github.com/Sakuralaaa/duckai-cpa> (fork of [LandmineHQ/duckai-cpa](https://github.com/LandmineHQ/duckai-cpa)) · **Upstream docs:** <https://landminehq.github.io/duckai-cpa/> · **Actions:** <https://github.com/Sakuralaaa/duckai-cpa/actions>
 
 ![DuckAI CPA admin overview](docs/assets/admin-overview.jpg)
 
@@ -27,6 +27,28 @@
 **DuckAI CPA** is a reverse-engineered bridge between **DuckDuckGo AI Chat (`duck.ai`)** and any OpenAI-compatible client, SDK or agent framework. Unlike browser-automation proxies, it speaks Duck.ai's native HTTP/SSE protocol directly from Node.js, including the rolling `X-VQD-Hash-1` anti-bot challenge, continuation frames for tool approvals, and durable streams.
 
 It ships with a complete self-hosted control plane: identity pool management, subscription login (including refresh-token auto-renewal), two-pool model routing, quota cooldowns, session history, request logs, token usage statistics, prompt generation, model configuration and a connection-test playground.
+
+---
+
+## 🎨 生图工作台（本 fork 新增）
+
+- **管理台「生图工作台」**：提示词 + 9 种风格预设 + 8 种画幅 + 1–4 张 + 最多 4 张参考图（上传 / 粘贴 / 拖入，或把图库里的图一键设为参考），`Ctrl/⌘+Enter` 生成。
+- **图库**：所有生成的图片（管理台、`/v1/images/generations`、`/v1/images/edits`）都保存到 `data/images/`，元数据在 SQLite；支持搜索提示词、收藏、下载、删除、"再来一张"、清空（收藏保留）。保留策略：`images.saveGallery` / `images.retentionDays`（0 = 永久）/ `images.maxItems`（默认 2000，收藏不计）。
+- **`POST /v1/images/edits`**：OpenAI 官方 multipart 形态（`image` / `image[]` 文件 + `prompt`），也接受 JSON（`image` / `images` 为 data URL）。只接受上传内容，不替客户端拉远程 URL。
+- **`size` / `aspect_ratio`**：duck.ai 不接受尺寸参数，网关把它换算成画幅提示交给模型（尽力而为）；响应里带 `aspect_ratio` 与图库 `id`。`n>1` 中途失败时返回已生成的图并标记 `partial`。
+- **Atoll 风格控制台**：粗边硬阴影、点阵画布、紫色品牌色，浅色 / 深色两套。
+- **镜像**：`ghcr.io/sakuralaaa/duckai-cpa`，默认内置中文字体（长对话 PDF 溢出与工具协议 PDF 需要）。推 `v*` tag 自动发布。
+
+```bash
+curl http://127.0.0.1:8787/v1/images/generations \
+  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"prompt":"黄昏海边公路上的复古摩托车，胶片质感","size":"1792x1024","n":2}'
+
+curl http://127.0.0.1:8787/v1/images/edits -H "Authorization: Bearer $KEY" \
+  -F prompt="把背景换成星空" -F "image[]=@cat.png"
+```
+
+> ⚠️ 使用前请阅读 Duck.ai 服务条款（<https://duckduckgo.com/duckai/privacy-terms>）：条款禁止绕过限流 / 安全措施、自动化查询以及基于 Duck.ai 提供 AI 服务。本项目仅供个人学习与私有部署，请勿公开提供或转售，风险自负。
 
 ---
 
@@ -103,13 +125,13 @@ Model IDs are resolved dynamically; aliases (e.g. `gpt-6`, `duck`) are accepted.
 
 ### Option A — GHCR image with Docker Compose (recommended)
 
-Image: `ghcr.io/landminehq/duckai-cpa:latest` (minimal Alpine + musl binary, `linux/amd64`).
+Image: `ghcr.io/sakuralaaa/duckai-cpa:latest` (minimal Alpine + musl binary, `linux/amd64`).
 Save this as `compose.yml` and run `docker compose up -d`:
 
 ```yaml
 services:
   duckai-cpa:
-    image: ghcr.io/landminehq/duckai-cpa:latest
+    image: ghcr.io/sakuralaaa/duckai-cpa:latest
     container_name: duckai-cpa
     restart: unless-stopped
     ports:
@@ -144,7 +166,7 @@ Or run it inline without a compose file:
 docker run -d --name duckai-cpa -p 8787:8787 \
   -v duckai-cpa-data:/data \
   -e DUCKAI_CPA_ADMIN_TOKEN=replace-with-a-strong-random-token \
-  ghcr.io/landminehq/duckai-cpa:latest
+  ghcr.io/sakuralaaa/duckai-cpa:latest
 docker logs -f duckai-cpa
 ```
 
@@ -158,12 +180,12 @@ docker logs -f duckai-cpa
   [docs/BINARY-BUILDS.md](docs/BINARY-BUILDS.md).
 - The repo also ships `docker-compose.ghcr.yml` with the same settings if you cloned the source.
 
-> If `ghcr.io/landminehq/duckai-cpa:latest` is missing or still points to an old Node image, run the
+> If `ghcr.io/sakuralaaa/duckai-cpa:latest` is missing or still points to an old Node image, run the
 > manual `Actions → publish-docker-image` workflow first (see [Publishing](#publishing)).
 
 ### Option B — Download a prebuilt single-file binary (latest release)
 
-Go to the **[latest GitHub Release](https://github.com/LandmineHQ/duckai-cpa/releases/latest)** and
+Go to the **[latest GitHub Release](https://github.com/Sakuralaaa/duckai-cpa/releases/latest)** and
 download the asset for your platform — no Node.js, no Bun, no dependencies:
 
 | Platform | Release asset |
@@ -228,7 +250,7 @@ version: v0.1.0        # required, Docker tag rules (letters/digits/._-)
 also_latest: false     # also push :latest
 ```
 
-- always pushes `ghcr.io/landminehq/duckai-cpa:<version>`;
+- always pushes `ghcr.io/sakuralaaa/duckai-cpa:<version>`;
 - `also_latest: true` additionally pushes `:latest` (used by the Quick Start above);
 - image platform: `linux/amd64` (arm64 users can build locally with `bun-linux-arm64-musl`);
 - old Node.js images/release archives are no longer generated.

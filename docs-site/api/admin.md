@@ -12,7 +12,7 @@
 Authorization: Bearer <adminToken>
 ```
 
-> 普通 API Key 不能访问管理 API。完整契约见仓库 [`docs/ADMIN_API_V2.md`](https://github.com/LandmineHQ/duckai-cpa/blob/main/docs/ADMIN_API_V2.md)。
+> 普通 API Key 不能访问管理 API。完整契约见仓库 [`docs/ADMIN_API_V2.md`](https://github.com/Sakuralaaa/duckai-cpa/blob/main/docs/ADMIN_API_V2.md)。
 
 ## 常用端点
 

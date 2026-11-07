@@ -50,7 +50,13 @@ export default {
           foreground: 'hsl(var(--card-foreground))'
         }
       },
+      fontFamily: {
+        sans: ['Inter Variable', 'Noto Sans SC Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono Variable', 'ui-monospace', 'Menlo', 'Consolas', 'Noto Sans SC Variable', 'PingFang SC', 'monospace']
+      },
       borderRadius: {
+        '2xl': 'calc(var(--radius) + 4px)',
+        xl: 'calc(var(--radius) + 2px)',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)'

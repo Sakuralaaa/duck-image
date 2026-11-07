@@ -178,6 +178,8 @@ export function createServer(options = {}) {
   const syncDevices = options.syncDevices || null;
   // v2.11: /v1 X-Session-Id compaction summary store.
   const chatSummaries = options.chatSummaries || null;
+  // 生图图库（data/images + SQLite images 表）
+  const gallery = options.gallery || null;
   // v2.15: first-class subscriptions (one subscription can back many identities).
   const subscriptions = options.subscriptions || null;
   // v2.31：会话历史（SQLite）
@@ -274,6 +276,7 @@ export function createServer(options = {}) {
     pairing,
     syncDevices,
     chatSummaries,
+    gallery,
     subscriptions,
     logger,
     version,

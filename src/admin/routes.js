@@ -30,6 +30,7 @@ import { handleLogs, handleLogsDownload, handleLogsRetention, handleUsage } from
 import { handleKeys } from './routes/keys.js';
 import { handleHistory } from './routes/history.js';
 import { handleSessions } from './routes/sessions.js';
+import { handleImages } from './routes/images.js';
 import { notFound } from '../openai/errors.js';
 
 /* ------------------------------------------------------------------ */
@@ -113,6 +114,9 @@ export async function handleAdminRequest(ctx, route, method) {
       return handleModels(ctx);
     case 'history':
       return handleHistory(ctx, parts, method, route);
+    // 生图工作台 + 图库
+    case 'images':
+      return handleImages(ctx, parts);
     case 'health':
       if (parts.length !== 1) throw notFound(`Unknown admin endpoint: ${method} ${route}`);
       return handleHealth(ctx);

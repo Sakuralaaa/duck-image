@@ -13,6 +13,7 @@ import { ConsoleLayout } from './components/console-layout';
 import { LoginGate } from './components/login-gate';
 import { OverviewPage } from './pages/overview';
 import { PlaygroundPage } from './pages/playground';
+import { ImagesPage } from './pages/images';
 import { IdentityPage } from './pages/identity';
 import { IdentitiesPage } from './pages/identities';
 import { SubscriptionsPage } from './pages/subscriptions';
@@ -42,6 +43,8 @@ function PageFor({ route }: { route: Route }) {
   switch (route) {
     case 'overview':
       return <OverviewPage />;
+    case 'images':
+      return <ImagesPage />;
     case 'chat':
       return <PlaygroundPage />;
     case 'identity':
@@ -71,7 +74,9 @@ function PageFor({ route }: { route: Route }) {
 
 const ROUTE_TITLES: Record<Route, string> = {
   overview: '概览',
-  chat: '连接测试',
+  images: '生图工作台',
+  chat: '对话测试',
+  history: '会话历史',
   identity: '默认身份',
   identities: '身份池',
   subscriptions: '订阅',

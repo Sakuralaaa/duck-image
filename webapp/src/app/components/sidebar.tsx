@@ -1,5 +1,5 @@
 import {
-  History, Activity, Check, ChevronDown, Code2, CreditCard, Fingerprint, KeyRound, LayoutDashboard, LogOut, MessagesSquare, Monitor, Moon, Network, ScrollText, Settings, SlidersHorizontal, Sun, Users, X } from 'lucide-react';
+  History, Activity, Check, ChevronDown, Code2, CreditCard, Fingerprint, ImagePlus, KeyRound, LayoutDashboard, LogOut, MessagesSquare, Monitor, Moon, Network, ScrollText, Settings, SlidersHorizontal, Sun, Users, X } from 'lucide-react';
 import type { Route } from '@/app/lib/hash-route';
 import {
   ROUTE_META } from '@/app/lib/hash-route';
@@ -22,20 +22,40 @@ import {
 import {
   Brand } from './brand';
 
-const NAV_ITEMS: Array<{ route: Route; label: string; icon: typeof LayoutDashboard }> = [
-  { route: 'overview', label: '概览', icon: LayoutDashboard },
-  { route: 'chat', label: '连接测试', icon: MessagesSquare },
-  { route: 'identity', label: '默认身份', icon: Fingerprint },
-  { route: 'identities', label: '身份池', icon: Users },
-  { route: 'subscriptions', label: '订阅', icon: CreditCard },
-  { route: 'history', label: '会话历史', icon: History },
-  { route: 'proxy', label: '代理', icon: Network },
-  { route: 'settings', label: '设置', icon: Settings },
-  { route: 'model-config', label: '模型配置', icon: SlidersHorizontal },
-  { route: 'keys', label: 'API Key', icon: KeyRound },
-  { route: 'logs', label: '日志', icon: ScrollText },
-  { route: 'examples', label: '示例', icon: Code2 }
+type NavItem = { route: Route; label: string; icon: typeof LayoutDashboard };
+
+const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
+  {
+    title: '工作台',
+    items: [
+      { route: 'overview', label: '概览', icon: LayoutDashboard },
+      { route: 'images', label: '生图工作台', icon: ImagePlus },
+      { route: 'chat', label: '对话测试', icon: MessagesSquare },
+      { route: 'history', label: '会话历史', icon: History }
+    ]
+  },
+  {
+    title: '账号',
+    items: [
+      { route: 'identity', label: '默认身份', icon: Fingerprint },
+      { route: 'identities', label: '身份池', icon: Users },
+      { route: 'subscriptions', label: '订阅', icon: CreditCard }
+    ]
+  },
+  {
+    title: '系统',
+    items: [
+      { route: 'keys', label: 'API Key', icon: KeyRound },
+      { route: 'model-config', label: '模型配置', icon: SlidersHorizontal },
+      { route: 'proxy', label: '代理', icon: Network },
+      { route: 'settings', label: '设置', icon: Settings },
+      { route: 'logs', label: '日志', icon: ScrollText },
+      { route: 'examples', label: '调用示例', icon: Code2 }
+    ]
+  }
 ];
+
+const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
 
 const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; icon: typeof Sun }> = [
   { value: 'light', label: '浅色', icon: Sun },
@@ -84,11 +104,11 @@ export function Sidebar({
       ) : null}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r-2 border-[color:var(--edge)] bg-[hsl(var(--side))] transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex items-center justify-between gap-2 border-b px-4 py-4">
+        <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-5">
           <a href="#/overview" className="rounded-md" onClick={onCloseMobile}>
             <Brand />
           </a>
@@ -97,32 +117,44 @@ export function Sidebar({
           </Button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="主导航">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = route === item.route;
-            return (
-              <a
-                key={item.route}
-                href={`#/${item.route}`}
-                onClick={onCloseMobile}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-              >
-                <Icon className={cn('h-4 w-4', active ? 'text-primary' : '')} />
-                {item.label}
-              </a>
-            );
-          })}
+        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2 scrollbar-thin" aria-label="主导航">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title}>
+              <div className="mb-1.5 px-2 font-mono text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                {group.title}
+              </div>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = route === item.route;
+                  return (
+                    <a
+                      key={item.route}
+                      href={`#/${item.route}`}
+                      onClick={onCloseMobile}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'flex items-center gap-2.5 border-2 border-transparent px-2.5 py-1.5 text-sm font-medium transition-colors',
+                        active ? 'nav-active font-semibold' : 'rounded-[4px] text-muted-foreground hover:bg-card hover:text-foreground'
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                      {item.route === 'images' && !active ? (
+                        <span className="ml-auto rounded-[3px] border-[1.5px] border-[color:var(--edge)] bg-primary px-1 font-mono text-[9px] font-bold not-italic text-primary-foreground">
+                          NEW
+                        </span>
+                      ) : null}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="space-y-2 border-t p-3">
-          <div className="rounded-lg bg-muted/50 px-3 py-2">
+        <div className="space-y-2 p-3">
+          <div className="tile bg-card px-3 py-2">
             <div className="flex items-center gap-2 text-xs font-medium">
               <span className={cn('h-2 w-2 shrink-0 rounded-full', status.dot)} aria-hidden="true" />
               <span className={cn('truncate', status.tone)}>{status.label}</span>
@@ -168,15 +200,6 @@ export function Sidebar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Button
-            variant="ghost"
-            className="w-full justify-start px-2 text-xs text-muted-foreground"
-            onClick={onLogout}
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            退出登录
-          </Button>
         </div>
       </aside>
     </>

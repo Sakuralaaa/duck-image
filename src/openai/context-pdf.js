@@ -38,6 +38,18 @@ export class PdfCapacityError extends Error {
   }
 }
 
+/**
+ * Linux 发行版的中文字体多为 .ttc 字体集合（wqy-zenhei / Noto CJK）。
+ * fontkit.create() 对集合返回 TrueTypeCollection，pdf-lib 无法直接嵌入（createSubset is not a function），
+ * 这里取集合中的第一个字体。
+ */
+const collectionAwareFontkit = {
+  create(data, postscriptName) {
+    const font = fontkit.create(data, postscriptName);
+    return font && Array.isArray(font.fonts) ? font.fonts[0] : font;
+  }
+};
+
 function readFont() {
   for (const candidate of CJK_FONT_CANDIDATES) {
     try {
@@ -171,7 +183,7 @@ export async function createContextPdf({ messages = [], maxPages = MAX_PAGES_DEF
 
   let font;
   if (fontInfo) {
-    doc.registerFontkit(fontkit);
+    doc.registerFontkit(collectionAwareFontkit);
     try {
       font = await doc.embedFont(fontInfo.bytes, { subset: true });
     } catch {
@@ -278,7 +290,7 @@ export async function createToolsPdf({ toolProtocol = '', toolNames = [], maxPag
   const fontInfo = readFont();
   let font;
   if (fontInfo) {
-    doc.registerFontkit(fontkit);
+    doc.registerFontkit(collectionAwareFontkit);
     try { font = await doc.embedFont(fontInfo.bytes, { subset: true }); } catch { font = null; }
   }
   if (!font) font = await doc.embedFont(StandardFonts.Helvetica);

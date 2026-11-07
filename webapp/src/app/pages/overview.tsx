@@ -11,8 +11,7 @@ import {
   ShieldCheck,
   Timer,
   Wifi,
-  WifiOff
-} from 'lucide-react';
+  WifiOff, ImagePlus } from 'lucide-react';
 import { useOverview } from '@/app/lib/overview-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -410,7 +409,16 @@ export function OverviewPage() {
             </Card>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <a href="#/images" className="surface-hover block rounded-[4px]" title="打开生图工作台">
+              <StatTile
+                label="今日生图"
+                value={formatNumber(data?.images?.today ?? 0)}
+                hint={`图库共 ${formatNumber(data?.images?.count ?? 0)} 张 · 点击去生图`}
+                icon={ImagePlus}
+                tone="warning"
+              />
+            </a>
             <StatTile
               label="上游请求"
               value={formatNumber(upstreamStats.requests)}

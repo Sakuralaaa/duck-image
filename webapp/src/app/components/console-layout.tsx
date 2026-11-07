@@ -32,7 +32,7 @@ export function ConsoleLayout({
         : 'bg-destructive';
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="topline flex min-h-screen">
       <Sidebar
         route={route}
         mobileOpen={mobileOpen}
@@ -40,7 +40,7 @@ export function ConsoleLayout({
         onLogout={onLogout}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-card/85 px-4 py-2.5 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b-2 border-[color:var(--edge)] bg-[hsl(var(--side))] px-4 pb-2.5 pt-3.5 lg:hidden">
           <Button variant="ghost" size="icon" aria-label="打开菜单" onClick={() => setMobileOpen(true)}>
             <Menu className="h-4 w-4" />
           </Button>

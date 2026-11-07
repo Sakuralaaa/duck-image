@@ -141,6 +141,17 @@ export async function startTestServer(options = {}) {
     }
   }
 
+  // 生图图库（默认按 dataDir 创建；options.gallery === false 关闭）
+  let gallery = options.gallery || null;
+  if (!gallery && options.gallery !== false) {
+    try {
+      const galleryModule = await import('../../src/gallery.js');
+      gallery = await galleryModule.createGalleryStore({ dataDir, config, logger });
+    } catch {
+      gallery = null;
+    }
+  }
+
   const server = createServer({
     config,
     store,
@@ -152,6 +163,7 @@ export async function startTestServer(options = {}) {
     ...(proxyManager ? { proxy: proxyManager } : {}),
     ...(options.pairing ? { pairing: options.pairing } : {}),
     ...(chatSummaries ? { chatSummaries } : {}),
+    ...(gallery ? { gallery } : {}),
     ...(identityPool ? { identities: identityPool } : {}),
     ...(options.sessions ? { sessions: options.sessions } : {}),
     ...(options.subscriptions ? { subscriptions: options.subscriptions } : {}),
@@ -222,6 +234,7 @@ export async function startTestServer(options = {}) {
     identityPool,
     pairing: options.pairing || null,
     chatSummaries,
+    gallery,
     syncDevices,
     close
   };

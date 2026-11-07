@@ -1405,7 +1405,7 @@ export function PlaygroundPage() {
 
   return (
     <div>
-      <PageHeader title="连接测试" description="会话式连续对话：多轮上下文由服务端保存，刷新后历史仍在" />
+      <PageHeader title="对话测试" description="会话式连续对话：多轮上下文由服务端保存，刷新后历史仍在" />
 
       {error ? <ErrorBanner message={error} onRetry={() => void loadSessions()} /> : null}
 

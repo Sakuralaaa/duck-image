@@ -129,6 +129,8 @@ export interface Overview {
   recentAdmin?: AdminLogItem[];
   /** v1 遗留字段。 */
   recent?: UpstreamLogItem[];
+  /** 生图图库统计 */
+  images?: { count: number; today: number; bytes: number; lastAt: number | null } | null;
 }
 
 export interface LogsResponse<T> {

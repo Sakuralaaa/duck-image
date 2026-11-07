@@ -360,6 +360,16 @@ async function main() {
     logger.warn('Responses 响应链不可用：previous_response_id 将被拒绝', { error: error.message });
   }
 
+  let gallery = null;
+  try {
+    const galleryModule = await import('./gallery.js');
+    gallery = await galleryModule.createGalleryStore({ dataDir: paths.dataDir, config, logger });
+    logger.info(`生图图库就绪（${gallery.dir}）`);
+  } catch (error) {
+    gallery = null;
+    logger.warn('生图图库不可用：生成的图片不会保存', { error: error.message });
+  }
+
   const queue = createUpstreamQueue({ config, logger });
   const serverOptions = {
     config,
@@ -376,6 +386,7 @@ async function main() {
     pairing,
     syncDevices,
     chatSummaries,
+    gallery,
     subscriptions
   };
   const adapterName = String(process.env.HTTP_ADAPTER || 'fastify').trim().toLowerCase();
@@ -464,6 +475,17 @@ async function main() {
       }
     }, 30 * 60 * 1000);
     historySweepTimer.unref?.();
+  }
+  if (gallery) {
+    const gallerySweepTimer = setInterval(() => {
+      try {
+        const removed = gallery.prune();
+        if (removed > 0) logger.info('[gallery] 已按保留策略清理图片', { removed });
+      } catch (error) {
+        logger.warn('[gallery] prune failed', { error: error.message });
+      }
+    }, 60 * 60 * 1000);
+    gallerySweepTimer.unref?.();
   }
   let bindingSweepTimer = null;
   if (identities && typeof identities.pruneBindings === 'function') {

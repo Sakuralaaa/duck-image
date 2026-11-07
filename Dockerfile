@@ -15,8 +15,8 @@
 #
 # 可选构建参数：
 #   APP_VERSION=0.1.0                仅写入 OCI label / DUCKAI_CPA_VERSION
-#   INSTALL_CJK_FONTS=true           安装 font-wqy-zenhei（≈16 MB），供上下文 PDF 渲染中文；
-#                                    默认 false 以保持镜像最小，需要时再开。
+#   INSTALL_CJK_FONTS=true           安装 font-wqy-zenhei（≈16 MB），供上下文 PDF / 工具协议 PDF 渲染中文；
+#                                    默认 true（中文长对话与工具调用依赖它），追求极致体积可传 false。
 # ---------------------------------------------------------------------------
 
 # ---------- 构建阶段：web + 单文件二进制 ----------
@@ -43,7 +43,7 @@ RUN npm run build:web \
 FROM alpine:3.20
 
 ARG APP_VERSION=""
-ARG INSTALL_CJK_FONTS="false"
+ARG INSTALL_CJK_FONTS="true"
 
 ENV DUCKAI_CPA_VERSION=${APP_VERSION} \
     DUCKAI_CPA_HOST=0.0.0.0 \
@@ -52,17 +52,18 @@ ENV DUCKAI_CPA_VERSION=${APP_VERSION} \
     NODE_ENV=production
 
 LABEL org.opencontainers.image.title="duckai-cpa" \
+      org.opencontainers.image.source="https://github.com/Sakuralaaa/duckai-cpa" \
       org.opencontainers.image.description="Duck.ai -> OpenAI-compatible gateway with admin dashboard (single-binary image)" \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.licenses="MIT"
 
 # ca-certificates: HTTPS 出站必需；libstdc++: Bun musl 运行时依赖。
-# CJK 字体是可选的 PDF 上下文渲染依赖（默认不装以保持最小）。
+# CJK 字体：上下文 PDF 渲染中文所需（默认安装）。
 RUN apk add --no-cache ca-certificates libstdc++ \
  && if [ "$INSTALL_CJK_FONTS" = "true" ]; then apk add --no-cache font-wqy-zenhei; fi \
  && addgroup -S -g 10001 duckai \
  && adduser -S -D -H -u 10001 -G duckai duckai \
- && mkdir -p /data \
+ && mkdir -p /data/images \
  && chown -R duckai:duckai /data
 
 COPY --from=build /app/dist/linux-x64-musl/duckai-cpa /usr/local/bin/duckai-cpa
@@ -70,7 +71,7 @@ COPY --from=build /app/dist/linux-x64-musl/RUN-README.txt /usr/local/share/ducka
 
 USER duckai
 
-# 运行数据：config.json / duckai.db / identity.json / pairing.json 等
+# 运行数据：config.json / duckai.db / identity.json / pairing.json / images/（生图图库）等
 VOLUME ["/data"]
 
 EXPOSE 8787
