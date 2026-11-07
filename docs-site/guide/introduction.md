@@ -1,6 +1,6 @@
 # 项目介绍
 
-**DuckAI CPA** 是一个自托管的 **duck.ai → OpenAI 兼容网关**。它把 DuckDuckGo AI Chat（`duck.ai`）的网页协议封装成标准 OpenAI API，并提供一个完整的 React 管理控制台。
+**Duck Image** 是一个自托管的 **duck.ai → OpenAI 兼容网关**。它把 DuckDuckGo AI Chat（`duck.ai`）的网页协议封装成标准 OpenAI API，并提供一个完整的 React 管理控制台。
 
 > 本项目只面向**个人学习与私有部署**。请遵守 duck.ai 的服务条款，不要把它作为公共服务或用于批量抓取。
 
@@ -8,7 +8,7 @@
 
 duck.ai 只提供网页聊天界面，没有稳定的服务端 API；普通 OpenAI SDK、Codex、DSH、Chatbox、Cherry Studio、Open WebUI 等客户端无法直接使用。
 
-DuckAI CPA 在中间维护：
+Duck Image 在中间维护：
 
 - 浏览器同形态的 **x-vqd-hash-1** 反爬挑战；
 - **SSE 流式**与工具审批的 continuation；

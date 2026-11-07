@@ -1,13 +1,13 @@
 import { defineConfig } from 'vitepress'
 
-// GitHub Pages project site: https://sakuralaaa.github.io/duckai-cpa/
+// GitHub Pages project site: https://sakuralaaa.github.io/duck-image/
 // Override with DOCS_BASE=/ when deploying at a custom domain.
-const base = (process.env.DOCS_BASE || '/duckai-cpa/').replace(/\/?$/, '/')
+const base = (process.env.DOCS_BASE || '/duck-image/').replace(/\/?$/, '/')
 
 export default defineConfig({
   lang: 'zh-CN',
-  title: 'DuckAI CPA',
-  titleTemplate: ':title · DuckAI CPA',
+  title: 'Duck Image',
+  titleTemplate: ':title · Duck Image',
   description: '把 duck.ai 封装成 OpenAI 兼容 API 的自托管网关 —— 多身份池、订阅、工具调用、图片与 PDF 上下文。',
   base,
   cleanUrls: true,
@@ -16,7 +16,7 @@ export default defineConfig({
     ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
     ['meta', { name: 'theme-color', content: '#f97316' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'DuckAI CPA' }],
+    ['meta', { property: 'og:title', content: 'Duck Image' }],
     ['meta', { property: 'og:description', content: 'OpenAI 兼容的 duck.ai 自托管网关与 React 管理控制台。' }],
     ['meta', { property: 'og:image', content: `${base}assets/admin-overview.jpg` }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }]
@@ -27,7 +27,7 @@ export default defineConfig({
   },
   themeConfig: {
     logo: '/logo.svg',
-    siteTitle: 'DuckAI CPA',
+    siteTitle: 'Duck Image',
     nav: [
       { text: '首页', link: '/' },
       { text: '指南', link: '/guide/introduction', activeMatch: '^/guide/' },
@@ -35,7 +35,7 @@ export default defineConfig({
       { text: '参考', link: '/reference/configuration', activeMatch: '^/reference/' },
       {
         text: 'GitHub',
-        link: 'https://github.com/Sakuralaaa/duckai-cpa'
+        link: 'https://github.com/Sakuralaaa/duck-image'
       }
     ],
     sidebar: {
@@ -111,11 +111,11 @@ export default defineConfig({
     lastUpdatedText: '最后更新',
     footer: {
       message: '仅供个人学习与私有部署；请遵守 duck.ai 的服务条款。',
-      copyright: 'MIT Licensed · DuckAI CPA'
+      copyright: 'MIT Licensed · Duck Image · based on LandmineHQ/duckai-cpa'
     },
-    socialLinks: [{ icon: 'github', link: 'https://github.com/Sakuralaaa/duckai-cpa' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/Sakuralaaa/duck-image' }],
     editLink: {
-      pattern: 'https://github.com/Sakuralaaa/duckai-cpa/edit/main/docs-site/:path',
+      pattern: 'https://github.com/Sakuralaaa/duck-image/edit/main/docs-site/:path',
       text: '在 GitHub 上编辑此页'
     }
   }

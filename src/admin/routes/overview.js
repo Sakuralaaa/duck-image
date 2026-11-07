@@ -46,7 +46,7 @@ async function handleOverview(ctx) {
 
   ctx.json(200, {
     service: {
-      name: 'duckai-cpa',
+      name: 'duck-image',
       version: ctx.version,
       uptimeSec: Math.round((Date.now() - ctx.serviceStartedAt) / 1000)
     },

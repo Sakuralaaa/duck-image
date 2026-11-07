@@ -106,7 +106,7 @@ export function renderIntroPage({ version, config }) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml('duckai-cpa')} v2</title>
+  <title>${escapeHtml('Duck Image')} v2</title>
   <style>
     :root { color-scheme: light dark; }
     body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 860px; margin: 3rem auto; padding: 0 1.25rem; line-height: 1.65; }
@@ -118,7 +118,7 @@ export function renderIntroPage({ version, config }) {
   </style>
 </head>
 <body>
-  <h1>${escapeHtml('duckai-cpa')} <span class="tag">v2</span></h1>
+  <h1>${escapeHtml('Duck Image')} <span class="tag">v2</span></h1>
   <p class="tag">OpenAI-compatible gateway for duck.ai · version ${escapeHtml(version)}</p>
   <p>管理后台：<a href="/admin/">/admin</a> · 健康检查：<a href="/healthz">/healthz</a></p>
   <p><strong>v2 起所有 <code>/v1/*</code> 请求必须携带 API Key</strong>（<code>Authorization: Bearer sk-duck-…</code>），首次启动会自动生成 default key 并打印一次，也可在管理后台创建。</p>

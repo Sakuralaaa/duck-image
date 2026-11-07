@@ -32,7 +32,7 @@ test('GET /admin/api/overview：service/upstream.queue/stats 拆分/models/recen
     assert.equal(res.status, 200);
     const body = res.json;
 
-    assert.equal(body.service.name, 'duckai-cpa');
+    assert.equal(body.service.name, 'duck-image');
     assert.equal(typeof body.service.version, 'string');
     assert.equal(typeof body.service.uptimeSec, 'number');
 

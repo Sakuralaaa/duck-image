@@ -13,7 +13,7 @@ export function PageHeader({ title, description, actions, showQueue = true, eyeb
   return (
     <div className="rule-bottom mb-6 flex flex-col gap-3 pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
-        <div className="eyebrow mb-1.5">DuckAI CPA · {eyebrow ?? 'Console'}</div>
+        <div className="eyebrow mb-1.5">Duck Image · {eyebrow ?? 'Console'}</div>
         <h1 className="slant text-[30px] font-bold leading-[1.12] sm:text-[38px]">{title}</h1>
         {description ? <p className="mt-2 max-w-2xl text-[15px] text-muted-foreground">{description}</p> : null}
       </div>

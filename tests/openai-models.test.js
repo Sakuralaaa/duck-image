@@ -112,7 +112,7 @@ test('健康检查 /healthz：上游 mock 状态与版本透出', async () => {
     const res = await request(baseUrl, '/healthz');
     assert.equal(res.status, 200);
     assert.equal(res.json.ok, true);
-    assert.equal(res.json.service, 'duckai-cpa');
+    assert.equal(res.json.service, 'duck-image');
     assert.equal(typeof res.json.version, 'string');
     assert.equal(typeof res.json.uptimeSec, 'number');
     assert.equal(res.json.upstream.ok, true);

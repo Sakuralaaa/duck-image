@@ -20,14 +20,14 @@ jobs:
 
       - name: Build minimal image
         run: |
-          docker build -f Dockerfile -t duckai-cpa:binary-ci .
+          docker build -f Dockerfile -t duck-image:binary-ci .
 
       - name: Show image size
         run: |
-          SIZE=$(docker image inspect duckai-cpa:binary-ci -f '{{.Size}}')
+          SIZE=$(docker image inspect duck-image:binary-ci -f '{{.Size}}')
           echo "image size: $((SIZE/1024/1024)) MiB uncompressed"
           {
-            echo "### duckai-cpa:binary-ci"
+            echo "### duck-image:binary-ci"
             echo ""
             echo "- uncompressed image size: $((SIZE/1024/1024)) MiB"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -36,8 +36,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run -d --name duckai-cpa-binary-ci -p 8787:8787 duckai-cpa:binary-ci
-          cleanup() { docker logs duckai-cpa-binary-ci || true; docker rm -f duckai-cpa-binary-ci || true; }
+          docker run -d --name duck-image-binary-ci -p 8787:8787 duck-image:binary-ci
+          cleanup() { docker logs duck-image-binary-ci || true; docker rm -f duck-image-binary-ci || true; }
           trap cleanup EXIT
 
           ok=0
@@ -50,8 +50,8 @@ jobs:
           curl -fsS http://127.0.0.1:8787/healthz | grep -q '"ok":true'
           curl -fsS http://127.0.0.1:8787/admin/ | grep -q '/admin/assets/'
 
-          TOKEN=$(docker exec duckai-cpa-binary-ci cat /data/config.json | python3 -c 'import json,sys;print(json.load(sys.stdin)["auth"]["adminToken"])')
-          KEY=$(docker exec duckai-cpa-binary-ci cat /data/config.json | python3 -c 'import json,sys;print(json.load(sys.stdin)["auth"]["apiKeys"][0])')
+          TOKEN=$(docker exec duck-image-binary-ci cat /data/config.json | python3 -c 'import json,sys;print(json.load(sys.stdin)["auth"]["adminToken"])')
+          KEY=$(docker exec duck-image-binary-ci cat /data/config.json | python3 -c 'import json,sys;print(json.load(sys.stdin)["auth"]["apiKeys"][0])')
           curl -fsS "http://127.0.0.1:8787/admin/api/overview?token=$TOKEN" | grep -q '"service"'
           curl -fsS -H "Authorization: Bearer $KEY" http://127.0.0.1:8787/v1/models | grep -q '"data"'
 

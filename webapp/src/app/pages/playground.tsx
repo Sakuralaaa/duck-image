@@ -342,7 +342,7 @@ export function PlaygroundPage() {
   const [input, setInput] = useState('');
   const [model, setModel] = useState('gpt-6-luna');
   const [reasoning, setReasoning] = useState('none');
-  const [webSearch, setWebSearch] = useState(false);
+  const [webSearch, setWebSearch] = useState(true);
   const [imageGeneration, setImageGeneration] = useState(false);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);

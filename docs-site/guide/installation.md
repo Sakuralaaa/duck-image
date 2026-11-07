@@ -15,7 +15,7 @@
 镜像：
 
 ```text
-ghcr.io/sakuralaaa/duckai-cpa:latest
+ghcr.io/sakuralaaa/duck-image:latest
 ```
 
 - 基础镜像：Alpine 3.20 + musl 单文件二进制；
@@ -80,7 +80,7 @@ INSTALL_CJK_FONTS=true docker compose build
 ```ini
 # /etc/systemd/system/duckai-cpa.service
 [Unit]
-Description=DuckAI CPA
+Description=Duck Image
 After=network-online.target
 
 [Service]
@@ -104,7 +104,7 @@ sudo systemctl enable --now duckai-cpa
 ## 源码开发
 
 ```bash
-git clone https://github.com/Sakuralaaa/duckai-cpa.git
+git clone https://github.com/Sakuralaaa/duck-image.git
 cd duckai-cpa
 npm install
 npm run build:web

@@ -74,8 +74,8 @@ function PageFor({ route }: { route: Route }) {
 
 const ROUTE_TITLES: Record<Route, string> = {
   overview: '概览',
-  images: '生图工作台',
-  chat: '对话测试',
+  images: 'Duck Image',
+  chat: '对话',
   history: '会话历史',
   identity: '默认身份',
   identities: '身份池',
@@ -162,7 +162,7 @@ function AuthGate() {
   }, []);
 
   useEffect(() => {
-    document.title = `${ROUTE_TITLES[route] ?? '管理控制台'} · DuckAI CPA`;
+    document.title = `${ROUTE_TITLES[route] ?? '管理控制台'} · Duck Image`;
   }, [route]);
 
   if (auth === 'checking') return <BootSplash />;

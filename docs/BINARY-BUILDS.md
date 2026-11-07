@@ -161,7 +161,7 @@ macOS 122.8–131.6 MB；gzip 压缩后约 52–56 MB。
 
 ### 5.1 直接运行二进制
 
-**下载（推荐）**：到 [GitHub Releases 最新页](https://github.com/Sakuralaaa/duckai-cpa/releases/latest)
+**下载（推荐）**：到 [GitHub Releases 最新页](https://github.com/Sakuralaaa/duck-image/releases/latest)
 下载对应平台压缩包（`duckai-cpa-<platform>.zip|tar.gz`），无需构建。发布由
 `.github/workflows/publish-binaries.yml` 手动完成（见 §3.3）。
 
@@ -188,7 +188,7 @@ macOS 122.8–131.6 MB；gzip 压缩后约 52–56 MB。
 docker run -d --name duckai-cpa -p 8787:8787 \
   -v duckai-cpa-data:/data \
   -e DUCKAI_CPA_ADMIN_TOKEN=replace-with-a-strong-token \
-  ghcr.io/sakuralaaa/duckai-cpa:latest
+  ghcr.io/sakuralaaa/duck-image:latest
 # 或仓库内 compose（同一镜像）
 docker compose -f docker-compose.ghcr.yml up -d
 ```

@@ -35,7 +35,7 @@ export function LoginGate({
         <div className="mb-5 flex items-center gap-2.5">
           <BrandMark />
           <div className="leading-tight">
-            <div className="text-base font-semibold tracking-tight">DuckAI CPA</div>
+            <div className="text-base font-semibold tracking-tight">Duck Image</div>
             <div className="text-xs text-muted-foreground">OpenAI 兼容网关 · 管理控制台</div>
           </div>
         </div>

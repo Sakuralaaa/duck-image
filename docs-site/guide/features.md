@@ -1,6 +1,6 @@
 # 功能说明
 
-本页按使用场景说明 DuckAI CPA 的核心机制。只想快速接入可以看 [快速开始](/guide/quickstart)；需要字段细节看 [API 文档](/api/overview)。
+本页按使用场景说明 Duck Image 的核心机制。只想快速接入可以看 [快速开始](/guide/quickstart)；需要字段细节看 [API 文档](/api/overview)。
 
 ## 1. OpenAI 兼容层
 

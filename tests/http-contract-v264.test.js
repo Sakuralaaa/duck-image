@@ -108,7 +108,7 @@ test('静态路径穿越：编码反斜杠/点段不泄漏仓库文件', async (
     for (const candidate of ['/admin/..%5cpackage.json', '/admin/%2e%2e%5cpackage.json', '/admin/..%2fpackage.json']) {
       const res = await request(baseUrl, candidate);
       assert.ok([400, 403, 404].includes(res.status), `${candidate} 应被拒绝（实际 ${res.status}）`);
-      assert.ok(!res.text.includes('"duckai-cpa"') && !res.text.includes('"name": "duckai-cpa"'), `${candidate} 不应泄漏 package.json`);
+      assert.ok(!res.text.includes('"duck-image"') && !res.text.includes('"name": "duck-image"'), `${candidate} 不应泄漏 package.json`);
     }
   });
 });

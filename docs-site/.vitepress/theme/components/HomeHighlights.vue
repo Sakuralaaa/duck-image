@@ -58,7 +58,7 @@
       </div>
       <pre><code>services:
   duckai-cpa:
-    image: ghcr.io/sakuralaaa/duckai-cpa:latest
+    image: ghcr.io/sakuralaaa/duck-image:latest
     ports: ["8787:8787"]
     volumes:
       - duckai-cpa-data:/data
@@ -83,7 +83,7 @@ volumes:
         <a href="./guide/admin-console">浏览控制台功能 →</a>
       </div>
       <figure>
-        <img src="/assets/admin-overview.jpg" alt="DuckAI CPA 管理后台概览" loading="lazy" />
+        <img src="/assets/admin-overview.jpg" alt="Duck Image 管理后台概览" loading="lazy" />
         <figcaption>管理后台「概览」页：健康、队列、用量、模型与日志。</figcaption>
       </figure>
     </section>

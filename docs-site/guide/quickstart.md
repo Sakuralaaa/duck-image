@@ -1,6 +1,6 @@
 # 快速开始
 
-DuckAI CPA 推荐两种运行方式：
+Duck Image 推荐两种运行方式：
 
 - **Docker Compose**：使用 GHCR 预构建最小镜像；
 - **单文件二进制**：从 GitHub Release 下载对应平台，无需 Node.js/Bun。
@@ -16,7 +16,7 @@ DuckAI CPA 推荐两种运行方式：
 ```yaml
 services:
   duckai-cpa:
-    image: ghcr.io/sakuralaaa/duckai-cpa:latest
+    image: ghcr.io/sakuralaaa/duck-image:latest
     container_name: duckai-cpa
     restart: unless-stopped
     ports:
@@ -59,7 +59,7 @@ docker compose logs -f duckai-cpa
 
 ## 方式二：单文件二进制
 
-到 [最新 Release](https://github.com/Sakuralaaa/duckai-cpa/releases/latest) 下载对应平台的资产：
+到 [最新 Release](https://github.com/Sakuralaaa/duck-image/releases/latest) 下载对应平台的资产：
 
 | 平台 | 资产 |
 | --- | --- |

@@ -1,6 +1,6 @@
 {
-  "name": "duckai-cpa",
-  "version": "0.3.0",
+  "name": "duck-image",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "CPA-style OpenAI-compatible gateway for Duck.ai: chat/completions, responses, models, web search, reasoning effort and image generation.",

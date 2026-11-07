@@ -1,6 +1,6 @@
 name: publish-docker-image
 
-# 发布「极简镜像」（Dockerfile：Alpine + musl 二进制）到 GHCR：ghcr.io/<owner>/duckai-cpa
+# 发布「极简镜像」（Dockerfile：Alpine + musl 二进制）到 GHCR：ghcr.io/<owner>/duck-image
 #   - 推送 v* tag：自动构建并推送 :<tag> 与 :latest
 #   - 手动触发：填写 tag，可选是否同时推 :latest
 on:

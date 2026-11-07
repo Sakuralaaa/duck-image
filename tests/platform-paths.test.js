@@ -27,7 +27,7 @@ import { PROJECT_ROOT, resolvePaths } from '../src/config.js';
 const CWD = path.resolve(process.cwd());
 const FS_ROOT = path.parse(CWD).root;
 const VIRTUAL_ROOT = path.join(FS_ROOT, '~BUN', 'root');
-const FAKE_EXE = path.join(CWD, 'dist', 'windows-x64', 'duckai-cpa.exe');
+const FAKE_EXE = path.join(CWD, 'dist', 'windows-x64', 'duck-image.exe');
 
 test('detectCompiled：识别 bun standalone 虚拟根', () => {
   assert.equal(detectCompiled(VIRTUAL_ROOT), true, 'Windows ~BUN 虚拟根应判定为编译态');

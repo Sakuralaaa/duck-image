@@ -12,7 +12,7 @@
 
 import { DuckClient, DuckError } from './duck/index.js';
 import { DUCK_MODELS } from './duck/models.js';
-import { loadConfig } from './config.js';
+import { loadConfig, withEnvAliases } from './config.js';
 import { createStore } from './store.js';
 import { createLogger } from './logger.js';
 import { createUpstreamQueue } from './upstream/queue.js';
@@ -71,6 +71,8 @@ function listen(server, host, port) {
 }
 
 async function main() {
+  // DUCK_IMAGE_* 环境变量别名（旧 DUCKAI_CPA_* 仍可用）
+  Object.assign(process.env, withEnvAliases(process.env));
   const { config, paths, firstRun, generatedAdminToken, migrated, migrationNotes } = await loadConfig({ logger });
   logger.setLevel(config.logging.level);
 

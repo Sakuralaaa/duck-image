@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * duckai-cpa 多平台单文件二进制构建脚本（scripts/build-exe.mjs）。
+ * Duck Image 多平台单文件二进制构建脚本（scripts/build-exe.mjs）。
  *
  * 使用 Bun 的 `bun build --compile` 把 src/index.js 及其完整依赖图打包为单个可执行文件，
  * 同时把管理后台产物 web/、默认配置 config/、package.json 作为 asset 嵌入到二进制
@@ -21,7 +21,7 @@
  *   --force-web-build      强制重新执行 npm run build:web
  *   --skip-trim            不传 --trim（不裁剪未使用的 Bun 内置模块，产物更大）
  *   --no-assets            不嵌入 web/、config/、package.json（仅调试用）
- *   --outfile=<path>       自定义输出路径（默认 dist/<target>/duckai-cpa[.exe]）
+ *   --outfile=<path>       自定义输出路径（默认 dist/<target>/duck-image[.exe]）
  *   -h, --help             显示帮助
  *
  * 环境变量：
@@ -61,49 +61,49 @@ const TARGETS = Object.freeze({
     platform: 'win32',
     arch: 'x64',
     dirName: 'windows-x64',
-    binaryName: 'duckai-cpa.exe'
+    binaryName: 'duck-image.exe'
   },
   'bun-linux-x64': {
     label: 'Linux x64（glibc）',
     platform: 'linux',
     arch: 'x64',
     dirName: 'linux-x64',
-    binaryName: 'duckai-cpa'
+    binaryName: 'duck-image'
   },
   'bun-linux-arm64': {
     label: 'Linux arm64（glibc）',
     platform: 'linux',
     arch: 'arm64',
     dirName: 'linux-arm64',
-    binaryName: 'duckai-cpa'
+    binaryName: 'duck-image'
   },
   'bun-linux-x64-musl': {
     label: 'Linux x64（musl / Alpine）',
     platform: 'linux',
     arch: 'x64',
     dirName: 'linux-x64-musl',
-    binaryName: 'duckai-cpa'
+    binaryName: 'duck-image'
   },
   'bun-linux-arm64-musl': {
     label: 'Linux arm64（musl / Alpine）',
     platform: 'linux',
     arch: 'arm64',
     dirName: 'linux-arm64-musl',
-    binaryName: 'duckai-cpa'
+    binaryName: 'duck-image'
   },
   'bun-darwin-x64': {
     label: 'macOS x64（Intel）',
     platform: 'darwin',
     arch: 'x64',
     dirName: 'darwin-x64',
-    binaryName: 'duckai-cpa'
+    binaryName: 'duck-image'
   },
   'bun-darwin-arm64': {
     label: 'macOS arm64（Apple Silicon）',
     platform: 'darwin',
     arch: 'arm64',
     dirName: 'darwin-arm64',
-    binaryName: 'duckai-cpa'
+    binaryName: 'duck-image'
   }
 });
 
@@ -121,7 +121,7 @@ function defaultTargetForHost() {
 }
 
 const WINDOWS_TITLE = 'DuckAI CPA';
-const WINDOWS_PUBLISHER = 'duckai-cpa';
+const WINDOWS_PUBLISHER = 'duck-image';
 const WINDOWS_DESCRIPTION = 'DuckAI CPA - OpenAI-compatible gateway for Duck.ai';
 
 
@@ -273,7 +273,7 @@ function resolveTarget(options) {
 }
 
 function printHelp() {
-  console.log(`duckai-cpa 多平台单文件二进制构建脚本
+  console.log(`Duck Image 多平台单文件二进制构建脚本
 
 用法:
   node scripts/build-exe.mjs [选项]
@@ -292,7 +292,7 @@ function printHelp() {
   --force-web-build   强制重新执行 npm run build:web
   --skip-trim         不传 --trim（产物更大；仅排障用）
   --no-assets         不嵌入 web/、config/、package.json（仅调试用）
-  --outfile=<path>    自定义输出路径（默认 dist/<target>/duckai-cpa[.exe]）
+  --outfile=<path>    自定义输出路径（默认 dist/<target>/duck-image[.exe]）
   -h, --help          显示本帮助
 
 环境变量:
@@ -789,13 +789,13 @@ function writeRunReadme(outfile, targetInfo) {
   const readmePath = path.join(path.dirname(outfile), 'RUN-README.txt');
   const runLine =
     targetInfo.platform === 'win32'
-      ? 'Windows: 双击 duckai-cpa.exe（或在 PowerShell 执行 .\\duckai-cpa.exe）'
-      : 'Linux/macOS: chmod +x duckai-cpa && ./duckai-cpa';
+      ? 'Windows: 双击 duck-image.exe（或在 PowerShell 执行 .\\duck-image.exe）'
+      : 'Linux/macOS: chmod +x duck-image && ./duck-image';
   const runtimeNote =
     targetInfo.platform === 'win32'
       ? '- 未签名单文件，Windows SmartScreen 可能提示「更多信息 → 仍要运行」。'
       : targetInfo.platform === 'darwin'
-        ? '- 未签名二进制：首次运行如被 Gatekeeper 拦截，可右键打开或用 `xattr -d com.apple.quarantine ./duckai-cpa`。'
+        ? '- 未签名二进制：首次运行如被 Gatekeeper 拦截，可右键打开或用 `xattr -d com.apple.quarantine ./duck-image`。'
         : targetInfo.dirName.endsWith('-musl')
           ? '- musl 目标：用于 Alpine 等 musl 环境（极简镜像）。'
           : '- glibc 目标：用于 Debian/Ubuntu 等 glibc 环境（Alpine 请用 musl 目标）。';
@@ -882,7 +882,7 @@ async function main() {
     return;
   }
 
-  info(paint(CYAN, 'duckai-cpa 多平台单文件二进制构建'));
+  info(paint(CYAN, 'Duck Image 多平台单文件二进制构建'));
   info(paint(DIM, `仓库根: ${PROJECT_ROOT}`));
 
   step(1, 4, '检查构建环境');

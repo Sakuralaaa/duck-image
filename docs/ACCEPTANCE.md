@@ -1014,10 +1014,10 @@ exe 被复制到临时目录运行（不依赖仓库内 `src/`、`web/`、`confi
 
 - **Requirements**：A = Docker + Docker Compose（GHCR 预构建极简镜像，无需源码构建）；
   B = 目标机无需任何运行时，去 latest release 下载二进制。
-- **Option A（推荐）**：`ghcr.io/sakuralaaa/duckai-cpa:latest` + 内联 compose YAML
+- **Option A（推荐）**：`ghcr.io/sakuralaaa/duck-image:latest` + 内联 compose YAML
   （`docker compose up -d`），并补充等价的 `docker run` 内联命令；说明 `/data` 卷、UID 10001、
   `:latest`/`:version` tag、镜像大小、GHCR 未发布时的提示；CJK PDF 需本地构建（开发者）。
-- **Option B**：直接链接 <https://github.com/Sakuralaaa/duckai-cpa/releases/latest>，给出 7 个平台
+- **Option B**：直接链接 <https://github.com/Sakuralaaa/duck-image/releases/latest>，给出 7 个平台
   资产名（`duckai-cpa-windows-x64.zip`、`duckai-cpa-linux-x64.tar.gz`、
   `duckai-cpa-linux-x64-musl.tar.gz`、`duckai-cpa-linux-arm64{,-musl}.tar.gz`、
   `duckai-cpa-darwin-x64/arm64.tar.gz`）与解压/运行说明；不再写构建命令。

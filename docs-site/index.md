@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: DuckAI CPA
+  name: Duck Image
   text: Duck.ai 的 OpenAI 兼容网关
   tagline: 一套自托管、可审计、面向长期会话的网关：多身份池、订阅续期、图片上下文、PDF 上下文、客户端工具桥与完整管理控制台。
   image:
     src: /logo.svg
-    alt: DuckAI CPA
+    alt: Duck Image
   actions:
     - theme: brand
       text: 快速开始

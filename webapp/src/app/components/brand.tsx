@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-/** DuckAI CPA 品牌标识（杂志风：墨色方块 + 衬线字母）。 */
+/** Duck Image 品牌标识（杂志风：墨色方块 + 衬线字母）。 */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <span
@@ -21,8 +21,8 @@ export function Brand({ compact = false }: { compact?: boolean }) {
       <BrandMark />
       {compact ? null : (
         <div className="leading-tight">
-          <div className="slant text-[19px] font-bold">DuckAI CPA</div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Gateway · Console</div>
+          <div className="slant text-[19px] font-bold">Duck Image</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Self-hosted · duck.ai</div>
         </div>
       )}
     </div>

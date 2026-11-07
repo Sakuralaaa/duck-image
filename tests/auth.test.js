@@ -100,7 +100,7 @@ test('公开路由：/healthz 与 /admin 静态页无需鉴权', async () => {
     const healthz = await request(baseUrl, '/healthz');
     assert.equal(healthz.status, 200);
     assert.equal(healthz.json.ok, true);
-    assert.equal(healthz.json.service, 'duckai-cpa');
+    assert.equal(healthz.json.service, 'duck-image');
 
     const admin = await request(baseUrl, '/admin');
     assert.ok([200, 404].includes(admin.status), `unexpected /admin status: ${admin.status}`);

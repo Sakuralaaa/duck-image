@@ -2,7 +2,7 @@
 /**
  * Windows exe 端到端验证脚本（scripts/verify-exe.mjs）
  *
- * 目标：对 bun 编译产物 `dist/windows-x64/duckai-cpa.exe`（单文件，内嵌 web/ +
+ * 目标：对 bun 编译产物 `dist/windows-x64/duck-image.exe`（单文件，内嵌 web/ +
  * config/config.example.json + package.json）做一次可复用的黑盒验收；也可用
  * `--node src/index.js` 走完全相同的断言，先自测脚本本身（dev 服务器）。
  *
@@ -32,7 +32,7 @@
  *
  * 用法：
  *   node scripts/verify-exe.mjs                       # 验证默认 exe
- *   node scripts/verify-exe.mjs --exe dist/windows-x64/duckai-cpa.exe --port 18787
+ *   node scripts/verify-exe.mjs --exe dist/windows-x64/duck-image.exe --port 18787
  *   node scripts/verify-exe.mjs --node src/index.js --data-dir data/tmp/exe-verify-selfcheck
  *   node scripts/verify-exe.mjs --keep                # 保留进程 + 数据/日志目录
  *
@@ -54,7 +54,7 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(SCRIPT_DIR, '..');
 const DATA_TMP_DIR = path.join(PROJECT_ROOT, 'data', 'tmp');
-const DEFAULT_EXE = path.join(PROJECT_ROOT, 'dist', 'windows-x64', 'duckai-cpa.exe');
+const DEFAULT_EXE = path.join(PROJECT_ROOT, 'dist', 'windows-x64', 'duck-image.exe');
 const DEFAULT_NODE_ENTRY = 'src/index.js';
 const IS_WINDOWS = process.platform === 'win32';
 const MAX_HTTP_BODY = 16 * 1024 * 1024;
@@ -177,7 +177,7 @@ function printHelp() {
   node scripts/verify-exe.mjs [选项]
 
 选项:
-  --exe <path>       待验证 exe（默认 dist/windows-x64/duckai-cpa.exe，相对路径按仓库根解析）
+  --exe <path>       待验证 exe（默认 dist/windows-x64/duck-image.exe，相对路径按仓库根解析）
   --node [entry]     改为验证 node 入口（默认 src/index.js；同一套断言，用于脚本自测）
   --port <port>      监听端口（默认 18000-18999 随机空闲端口；显式指定时被占用会直接报错）
   --data-dir <dir>   数据目录（默认 <repo>/data/tmp/exe-verify-<时间戳>-<随机>；
@@ -188,7 +188,7 @@ function printHelp() {
 
 示例:
   node scripts/verify-exe.mjs
-  node scripts/verify-exe.mjs --exe dist/windows-x64/duckai-cpa.exe --port 18787
+  node scripts/verify-exe.mjs --exe dist/windows-x64/duck-image.exe --port 18787
   node scripts/verify-exe.mjs --node src/index.js --data-dir data/tmp/exe-verify-selfcheck
   node scripts/verify-exe.mjs --keep
 

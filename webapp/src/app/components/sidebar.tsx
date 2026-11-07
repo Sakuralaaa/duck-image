@@ -1,5 +1,6 @@
 import {
-  History, Activity, Check, ChevronDown, Code2, CreditCard, Fingerprint, ImagePlus, KeyRound, LayoutDashboard, LogOut, MessagesSquare, Monitor, Moon, Network, ScrollText, Settings, SlidersHorizontal, Sun, Users, X } from 'lucide-react';
+  History, Check, ChevronDown, Code2, CreditCard, Fingerprint, ImagePlus, KeyRound, LayoutDashboard, LogOut, MessagesSquare, Monitor, Moon, Network, ScrollText, Settings, SlidersHorizontal, Sun, Users, X } from 'lucide-react';
+import { useState } from 'react';
 import type { Route } from '@/app/lib/hash-route';
 import {
   ROUTE_META } from '@/app/lib/hash-route';
@@ -24,14 +25,13 @@ import {
 
 type NavItem = { route: Route; label: string; icon: typeof LayoutDashboard };
 
-const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
+const NAV_GROUPS: Array<{ title: string; items: NavItem[]; collapsible?: boolean }> = [
   {
-    title: '工作台',
+    title: '创作',
     items: [
-      { route: 'overview', label: '概览', icon: LayoutDashboard },
-      { route: 'images', label: '生图工作台', icon: ImagePlus },
-      { route: 'chat', label: '对话测试', icon: MessagesSquare },
-      { route: 'history', label: '会话历史', icon: History }
+      { route: 'images', label: 'Duck Image', icon: ImagePlus },
+      { route: 'chat', label: '对话', icon: MessagesSquare },
+      { route: 'overview', label: '概览', icon: LayoutDashboard }
     ]
   },
   {
@@ -46,10 +46,17 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
     title: '系统',
     items: [
       { route: 'keys', label: 'API Key', icon: KeyRound },
+      { route: 'settings', label: '设置', icon: Settings }
+    ]
+  },
+  {
+    title: '更多',
+    collapsible: true,
+    items: [
+      { route: 'logs', label: '日志', icon: ScrollText },
+      { route: 'history', label: '会话历史', icon: History },
       { route: 'model-config', label: '模型配置', icon: SlidersHorizontal },
       { route: 'proxy', label: '代理', icon: Network },
-      { route: 'settings', label: '设置', icon: Settings },
-      { route: 'logs', label: '日志', icon: ScrollText },
       { route: 'examples', label: '调用示例', icon: Code2 }
     ]
   }
@@ -87,6 +94,7 @@ export function Sidebar({
   onLogout: () => void;
 }) {
   const { data, error } = useOverview();
+  const [moreOpen, setMoreOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const status = connectionState(data, error);
   const queue = data?.upstream?.queue;
@@ -118,11 +126,23 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2 scrollbar-thin" aria-label="主导航">
-          {NAV_GROUPS.map((group) => (
+          {NAV_GROUPS.map((group) => {
+            const collapsed = group.collapsible && !moreOpen && !group.items.some((item) => item.route === route);
+            return (
             <div key={group.title}>
-              <div className="mb-1.5 px-2 eyebrow">
-                {group.title}
-              </div>
+              {group.collapsible ? (
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen((value) => !value)}
+                  className="mb-1.5 flex w-full items-center gap-1 px-2 eyebrow"
+                >
+                  {group.title}
+                  <ChevronDown className={cn('h-3 w-3 transition-transform', !collapsed && 'rotate-180')} />
+                </button>
+              ) : (
+                <div className="mb-1.5 px-2 eyebrow">{group.title}</div>
+              )}
+              {collapsed ? null : (
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
@@ -140,7 +160,7 @@ export function Sidebar({
                     >
                       <Icon className="h-4 w-4" />
                       {item.label}
-                      {item.route === 'images' && !active ? (
+                      {false ? (
                         <span className="ml-auto text-brand text-[9.5px] font-bold uppercase tracking-[0.14em]">
                           NEW
                         </span>
@@ -149,27 +169,20 @@ export function Sidebar({
                   );
                 })}
               </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="space-y-2 p-3">
-          <div className="tile bg-card px-3 py-2">
-            <div className="flex items-center gap-2 text-xs font-medium">
-              <span className={cn('h-2 w-2 shrink-0 rounded-full', status.dot)} aria-hidden="true" />
-              <span className={cn('truncate', status.tone)}>{status.label}</span>
-              <span className="ml-auto truncate text-[10px] text-muted-foreground">
-                v{data?.service?.version ?? '—'}
-              </span>
-            </div>
-            <div className="mt-1 flex items-center gap-1 text-[10.5px] text-muted-foreground">
-              <Activity className="h-3 w-3" />
-              执行 {queue?.inFlight ?? 0} · 排队 {queue?.waiting ?? 0} · RPS {queue?.rps ?? 1}
-            </div>
-            <div className="mt-0.5 truncate text-[10.5px] text-muted-foreground" title={ROUTE_META[route].description}>
-              {data?.upstream?.challengeOk === true ? 'x-vqd-hash-1 已就绪' : '挑战状态未知'}
-            </div>
-          </div>
+          <a href={status.dot === 'bg-emerald-500' ? '#/overview' : '#/logs'} className="flex items-center gap-2 px-2 text-xs" title={ROUTE_META[route].description}>
+            <span className={cn('h-2 w-2 shrink-0 rounded-full', status.dot)} aria-hidden="true" />
+            <span className={cn('truncate', status.tone)}>{status.label}</span>
+            <span className="ml-auto truncate text-[10px] text-muted-foreground">
+              {queue?.waiting ? `排队 ${queue.waiting} · ` : ''}v{data?.service?.version ?? '—'}
+            </span>
+          </a>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

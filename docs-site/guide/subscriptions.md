@@ -1,6 +1,6 @@
 # 订阅与身份
 
-Duck.ai 的付费模型/更高额度依赖 DuckDuckGo 登录态。DuckAI CPA 用“订阅实体 + 身份绑定”管理这些登录态。
+Duck.ai 的付费模型/更高额度依赖 DuckDuckGo 登录态。Duck Image 用“订阅实体 + 身份绑定”管理这些登录态。
 
 ## 概念
 

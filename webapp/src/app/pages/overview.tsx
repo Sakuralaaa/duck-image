@@ -228,225 +228,88 @@ export function OverviewPage() {
 
   return (
     <div>
-      <PageHeader title="概览" description="上游健康、RPS 队列、请求统计与模型目录" />
+      <PageHeader title="概览" description="今天用了多少，一眼看完" showQueue={false} />
 
-      {/* v2.34：第一行是「自动刷新」控制条：默认折叠显示当前间隔，可展开调整/手动刷新 */}
-      <div className="mb-4 rounded-xl border bg-card px-3 py-2" data-testid="overview-refresh-bar">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => setRefreshOpen((open) => !open)}
-            data-testid="overview-refresh-toggle"
-            aria-expanded={refreshOpen}
-          >
-            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', refreshOpen ? 'rotate-180' : '')} />
-            <span>
-              自动刷新：{refreshIntervalMs ? `每 ${Math.round(refreshIntervalMs / 1000)} 秒` : '已关闭'}
-            </span>
-            <span className="hidden text-muted-foreground/70 sm:inline">
-              · {lastUpdatedAt ? `更新于 ${formatDateTime(lastUpdatedAt)}` : '尚未加载'}
-            </span>
-          </button>
-          <div className="flex items-center gap-2">
-            {refreshOpen ? (
-              <div className="flex items-center gap-1">
-                {[0, 5000, 10000, 30000, 60000].map((interval) => (
-                  <Button
-                    key={interval}
-                    size="sm"
-                    variant={refreshIntervalMs === interval ? 'default' : 'outline'}
-                    className="h-7 px-2 text-[11px]"
-                    onClick={() => setRefreshIntervalMs(interval)}
-                    data-testid={`overview-refresh-interval-${interval}`}
-                  >
-                    {interval === 0 ? '关闭' : `${interval / 1000}s`}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
-            <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={refresh} data-testid="overview-refresh">
-              <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-              刷新
-            </Button>
-          </div>
-        </div>
-        {refreshOpen ? (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            自动刷新间隔会保存在本浏览器；页面切到后台时暂停轮询，回到前台会立即刷新一次。
-          </p>
-        ) : null}
+      {/* 状态一行：健康 / 队列 / RPS，只占一行小字，不当主角 */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="overview-status-line">
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className={cn(
+              'h-2 w-2 rounded-full',
+              upstreamBadge.variant === 'success' ? 'bg-emerald-500' : upstreamBadge.variant === 'warning' ? 'bg-amber-500' : 'bg-destructive'
+            )}
+            aria-hidden="true"
+          />
+          <span className="text-foreground">{upstreamBadge.text === '正常' ? '运行正常' : upstreamBadge.text}</span>
+        </span>
+        <span>执行 {queue?.inFlight ?? 0}</span>
+        <span>排队 {queue?.waiting ?? 0}</span>
+        <span>{queue?.rps ?? '—'} req/s</span>
+        <span className="hidden sm:inline">{lastUpdatedAt ? `更新于 ${formatRelative(lastUpdatedAt)}` : ''}</span>
+        <button type="button" onClick={refresh} className="ml-auto inline-flex items-center gap-1 hover:text-foreground" data-testid="overview-refresh">
+          <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} />
+          刷新
+        </button>
       </div>
 
       {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}
+      {data && !upstream?.ok ? (
+        <div className="mb-6 flex items-center gap-2 border-l-2 border-destructive bg-card px-4 py-3 text-sm">
+          <AlertTriangle className="h-4 w-4 text-destructive" />
+          上游暂时不可用，生图和对话可能失败。
+          <a href="#/logs" className="ml-auto underline underline-offset-4">看日志</a>
+        </div>
+      ) : null}
 
       {!data && loading ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
+          {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-[92px] rounded-xl" />
           ))}
         </div>
       ) : null}
 
       {data ? (
-        <div className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">上游健康</CardTitle>
-                  <Badge variant={upstreamBadge.variant}>{upstreamBadge.text}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">挑战 x-vqd-hash-1</span>
-                  <span className="flex items-center gap-1 font-medium">
-                    {upstream?.challengeOk ? (
-                      <>
-                        <Wifi className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        已就绪
-                      </>
-                    ) : (
-                      <>
-                        <WifiOff className="h-3.5 w-3.5 text-destructive" />
-                        未就绪
-                      </>
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">上游版本</span>
-                  <span className="max-w-[60%] truncate font-mono text-xs" title={upstream?.version ?? ''}>
-                    {upstream?.version || '—'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">探测延迟</span>
-                  <span className="tabular-nums">{formatDuration(upstream?.latencyMs)}</span>
-                </div>
-                {upstream?.error ? (
-                  <p className="flex items-start gap-1.5 rounded-md bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span className="break-words">{upstream.error}</span>
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">请求队列（RPS）</CardTitle>
-                  <Badge variant="outline" className="gap-1 font-normal">
-                    <Gauge className="h-3 w-3" />
-                    {queue?.rps ?? 1} req/s
-                  </Badge>
-                </div>
-                <CardDescription className="text-xs">所有上游调用统一 FIFO 排队</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg bg-muted/60 p-2.5">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Activity className="h-3 w-3" />
-                      执行中
-                    </div>
-                    <div className="mt-0.5 text-lg font-semibold tabular-nums">{queue?.inFlight ?? 0}</div>
-                  </div>
-                  <div className="rounded-lg bg-muted/60 p-2.5">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Clock3 className="h-3 w-3" />
-                      排队
-                    </div>
-                    <div className="mt-0.5 text-lg font-semibold tabular-nums">{queue?.waiting ?? 0}</div>
-                  </div>
-                  <div className="rounded-lg bg-muted/60 p-2.5">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Layers className="h-3 w-3" />
-                      并发上限 / 队列上限
-                    </div>
-                    <div className="mt-0.5 text-sm font-semibold tabular-nums">
-                      {queue?.maxConcurrent ?? 1} / {queue?.limit ?? 50}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-muted/60 p-2.5">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Timer className="h-3 w-3" />
-                      平均等待
-                    </div>
-                    <div className="mt-0.5 text-lg font-semibold tabular-nums">{formatDuration(queue?.avgWaitMs)}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">服务</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">名称</span>
-                  <span className="font-medium">{data.service?.name ?? 'duckai-cpa'}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">版本</span>
-                  <span className="font-mono text-xs">{data.service?.version ?? '—'}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">运行时长</span>
-                  <span className="tabular-nums">{formatUptime(data.service?.uptimeSec)}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">队列最近开始</span>
-                  <span className="tabular-nums text-xs" title={queue?.lastStartAt ? formatDateTime(queue.lastStartAt) : ''}>
-                    {queue?.lastStartAt ? formatRelative(queue.lastStartAt) : '—'}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <a href="#/images" className="surface-hover block" title="打开生图工作台">
+        <div className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <a href="#/images" className="surface-hover block" title="打开 Duck Image">
               <StatTile
                 label="今日生图"
                 value={formatNumber(data?.images?.today ?? 0)}
-                hint={`图库共 ${formatNumber(data?.images?.count ?? 0)} 张 · 点击去生图`}
+                hint={`图库共 ${formatNumber(data?.images?.count ?? 0)} 张`}
                 icon={ImagePlus}
-                tone="warning"
+                tone="primary"
               />
             </a>
             <StatTile
-              label="上游请求"
+              label="请求"
               value={formatNumber(upstreamStats.requests)}
-              hint={`错误 ${formatNumber(upstreamStats.errors)} · 错误率 ${errorRate(upstreamStats.errors, upstreamStats.requests)}`}
+              hint={`平均 ${formatDuration(upstreamStats.avgLatencyMs)}`}
               icon={Server}
-              tone="primary"
             />
+            <a href="#/logs" className="surface-hover block" title="看日志">
+              <StatTile
+                label="出错"
+                value={formatNumber(upstreamStats.errors)}
+                hint={upstreamStats.lastErrorAt ? `最近一次 ${formatRelative(upstreamStats.lastErrorAt)}` : '没有错误'}
+                icon={AlertTriangle}
+                tone={upstreamStats.errors ? 'danger' : 'default'}
+              />
+            </a>
             <StatTile
-              label="上游平均耗时"
-              value={formatDuration(upstreamStats.avgLatencyMs)}
-              hint={`限流 ${formatNumber(upstreamStats.rateLimitCount ?? 0)} 次`}
-              icon={Timer}
-            />
-            <StatTile
-              label="后台 API 请求"
-              value={formatNumber(adminStats.requests)}
-              hint={`错误 ${formatNumber(adminStats.errors)} · ${errorRate(adminStats.errors, adminStats.requests)}`}
-              icon={ShieldCheck}
-            />
-            <StatTile
-              label="最近错误"
-              value={upstreamStats.lastErrorAt ? formatRelative(upstreamStats.lastErrorAt) : '无'}
-              hint={upstreamStats.lastErrorAt ? formatDateTime(upstreamStats.lastErrorAt) : '运行期间未记录上游错误'}
-              icon={AlertTriangle}
-              tone={upstreamStats.lastErrorAt ? 'danger' : 'default'}
+              label="Token"
+              value={formatNumber(tokenData?.total?.total_tokens ?? 0)}
+              hint="估算值"
+              icon={Activity}
             />
           </div>
 
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              更多详情（Token 明细、模型目录、最近日志）
+            </summary>
+            <div className="mt-4 space-y-4">
           <Card data-testid="token-usage-card">
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -687,6 +550,8 @@ export function OverviewPage() {
               </Tabs>
             </CardContent>
           </Card>
+            </div>
+          </details>
         </div>
       ) : null}
     </div>

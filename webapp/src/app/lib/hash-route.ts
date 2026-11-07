@@ -19,8 +19,8 @@ export type Route = (typeof ROUTES)[number];
 
 export const ROUTE_META: Record<Route, { title: string; description: string }> = {
   overview: { title: '概览', description: '上游健康、RPS 队列与请求统计' },
-  images: { title: '生图工作台', description: '文生图 / 参考图生图、画幅与风格预设、图库管理（图片保存在 data/images）' },
-  chat: { title: '对话测试', description: '会话式连续对话，真实调用 duck.ai' },
+  images: { title: 'Duck Image', description: '一句话生成图片，可上传参考图' },
+  chat: { title: '对话', description: '和 duck.ai 聊天，可开联网搜索' },
   identity: { title: '默认身份', description: '默认匿名身份（journeyId/指纹）与 DuckDuckGo Sync & Backup' },
   identities: { title: '身份池', description: '匿名分身池、会话绑定、订阅绑定与路由策略' },
   subscriptions: { title: '订阅', description: 'DuckDuckGo Plus/Pro 订阅池：一个订阅可绑定多个身份' },
@@ -38,7 +38,7 @@ export const ROUTE_META: Record<Route, { title: string; description: string }> =
 
 function parseHash(): Route {
   const raw = window.location.hash.replace(/^#\/?/, '').split(/[?&#]/)[0];
-  return (ROUTES as readonly string[]).includes(raw) ? (raw as Route) : 'overview';
+  return (ROUTES as readonly string[]).includes(raw) ? (raw as Route) : 'images';
 }
 
 export function useHashRoute(): [Route, (route: Route) => void] {

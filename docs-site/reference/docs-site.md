@@ -51,7 +51,7 @@ docs-site/
 发布地址（项目站点）：
 
 ```text
-https://sakuralaaa.github.io/duckai-cpa/
+https://sakuralaaa.github.io/duck-image/
 ```
 
 ### 仓库设置

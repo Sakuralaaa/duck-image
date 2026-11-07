@@ -1,6 +1,6 @@
 # API 概览
 
-DuckAI CPA 对外提供一套 **OpenAI 兼容 API**，默认监听：
+Duck Image 对外提供一套 **OpenAI 兼容 API**，默认监听：
 
 ```text
 http://127.0.0.1:8787

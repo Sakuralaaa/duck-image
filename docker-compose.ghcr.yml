@@ -3,32 +3,32 @@
 #
 #   docker compose -f docker-compose.ghcr.yml up -d
 #   # 或手动：
-#   docker pull ghcr.io/sakuralaaa/duckai-cpa:latest
-#   docker run -d --name duckai-cpa -p 8787:8787 \
-#     -v duckai-cpa-data:/data ghcr.io/sakuralaaa/duckai-cpa:latest
+#   docker pull ghcr.io/sakuralaaa/duck-image:latest
+#   docker run -d --name duck-image -p 8787:8787 \
+#     -v duck-image-data:/data ghcr.io/sakuralaaa/duck-image:latest
 #
 # 镜像由 .github/workflows/publish-docker-image.yml 手动发布（Dockerfile 极简镜像）。
 # 旧版 Node 镜像与 release 包流水线已下线；本 compose 仅使用新的二进制镜像。
 # ---------------------------------------------------------------------------
 
 services:
-  duckai-cpa:
-    image: ghcr.io/sakuralaaa/duckai-cpa:${DUCKAI_CPA_VERSION:-latest}
-    container_name: duckai-cpa
+  duck-image:
+    image: ghcr.io/sakuralaaa/duck-image:${DUCK_IMAGE_VERSION:-latest}
+    container_name: duck-image
     restart: unless-stopped
 
     ports:
       - "8787:8787"
 
     environment:
-      DUCKAI_CPA_HOST: "0.0.0.0"
-      DUCKAI_CPA_PORT: "8787"
-      DUCKAI_CPA_DATA_DIR: "/data"
+      DUCK_IMAGE_HOST: "0.0.0.0"
+      DUCK_IMAGE_PORT: "8787"
+      DUCK_IMAGE_DATA_DIR: "/data"
       # 强烈建议替换为强随机串；留空则沿用卷内 data/config.json 的 token
-      DUCKAI_CPA_ADMIN_TOKEN: "${DUCKAI_CPA_ADMIN_TOKEN:-}"
+      DUCK_IMAGE_ADMIN_TOKEN: "${DUCK_IMAGE_ADMIN_TOKEN:-}"
 
     volumes:
-      - duckai-cpa-data:/data
+      - duck-image-data:/data
 
     healthcheck:
       test:
@@ -46,4 +46,4 @@ services:
     stop_grace_period: 15s
 
 volumes:
-  duckai-cpa-data:
+  duck-image-data:

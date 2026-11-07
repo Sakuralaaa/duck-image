@@ -44,37 +44,37 @@ jobs:
             os: windows-latest
             target: bun-windows-x64
             dir: windows-x64
-            asset: duckai-cpa-windows-x64.zip
+            asset: duck-image-windows-x64.zip
           - name: linux-x64
             os: ubuntu-latest
             target: bun-linux-x64
             dir: linux-x64
-            asset: duckai-cpa-linux-x64.tar.gz
+            asset: duck-image-linux-x64.tar.gz
           - name: linux-x64-musl
             os: ubuntu-latest
             target: bun-linux-x64-musl
             dir: linux-x64-musl
-            asset: duckai-cpa-linux-x64-musl.tar.gz
+            asset: duck-image-linux-x64-musl.tar.gz
           - name: linux-arm64
             os: ubuntu-24.04-arm
             target: bun-linux-arm64
             dir: linux-arm64
-            asset: duckai-cpa-linux-arm64.tar.gz
+            asset: duck-image-linux-arm64.tar.gz
           - name: linux-arm64-musl
             os: ubuntu-24.04-arm
             target: bun-linux-arm64-musl
             dir: linux-arm64-musl
-            asset: duckai-cpa-linux-arm64-musl.tar.gz
+            asset: duck-image-linux-arm64-musl.tar.gz
           - name: darwin-x64
             os: macos-15-intel
             target: bun-darwin-x64
             dir: darwin-x64
-            asset: duckai-cpa-darwin-x64.tar.gz
+            asset: duck-image-darwin-x64.tar.gz
           - name: darwin-arm64
             os: macos-15
             target: bun-darwin-arm64
             dir: darwin-arm64
-            asset: duckai-cpa-darwin-arm64.tar.gz
+            asset: duck-image-darwin-arm64.tar.gz
 
     steps:
       - name: Checkout
@@ -104,7 +104,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path "dist/${{ matrix.dir }}/duckai-cpa.exe", "dist/${{ matrix.dir }}/RUN-README.txt" `
+          Compress-Archive -Path "dist/${{ matrix.dir }}/duck-image.exe", "dist/${{ matrix.dir }}/RUN-README.txt" `
             -DestinationPath "${{ matrix.asset }}"
           Get-Item "${{ matrix.asset }}" | Select-Object Name, Length
 
@@ -112,7 +112,7 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          tar -C "dist/${{ matrix.dir }}" -czf "${{ matrix.asset }}" duckai-cpa RUN-README.txt
+          tar -C "dist/${{ matrix.dir }}" -czf "${{ matrix.asset }}" duck-image RUN-README.txt
           ls -lh "${{ matrix.asset }}"
 
       - name: Upload package
@@ -162,22 +162,22 @@ jobs:
           cat > release-body.md <<EOF
           ## Downloads
 
-          Choose the archive for your platform. Each archive contains \`duckai-cpa\` / \`duckai-cpa.exe\` and \`RUN-README.txt\`.
+          Choose the archive for your platform. Each archive contains \`duck-image\` / \`duck-image.exe\` and \`RUN-README.txt\`.
 
           | Platform | Download |
           | --- | --- |
-          | Windows x64 | [duckai-cpa-windows-x64.zip](${BASE}/duckai-cpa-windows-x64.zip) |
-          | Linux x64 (glibc: Debian/Ubuntu) | [duckai-cpa-linux-x64.tar.gz](${BASE}/duckai-cpa-linux-x64.tar.gz) |
-          | Linux x64 (musl: Alpine) | [duckai-cpa-linux-x64-musl.tar.gz](${BASE}/duckai-cpa-linux-x64-musl.tar.gz) |
-          | Linux arm64 (glibc) | [duckai-cpa-linux-arm64.tar.gz](${BASE}/duckai-cpa-linux-arm64.tar.gz) |
-          | Linux arm64 (musl: Alpine) | [duckai-cpa-linux-arm64-musl.tar.gz](${BASE}/duckai-cpa-linux-arm64-musl.tar.gz) |
-          | macOS Intel | [duckai-cpa-darwin-x64.tar.gz](${BASE}/duckai-cpa-darwin-x64.tar.gz) |
-          | macOS Apple Silicon | [duckai-cpa-darwin-arm64.tar.gz](${BASE}/duckai-cpa-darwin-arm64.tar.gz) |
+          | Windows x64 | [duck-image-windows-x64.zip](${BASE}/duck-image-windows-x64.zip) |
+          | Linux x64 (glibc: Debian/Ubuntu) | [duck-image-linux-x64.tar.gz](${BASE}/duck-image-linux-x64.tar.gz) |
+          | Linux x64 (musl: Alpine) | [duck-image-linux-x64-musl.tar.gz](${BASE}/duck-image-linux-x64-musl.tar.gz) |
+          | Linux arm64 (glibc) | [duck-image-linux-arm64.tar.gz](${BASE}/duck-image-linux-arm64.tar.gz) |
+          | Linux arm64 (musl: Alpine) | [duck-image-linux-arm64-musl.tar.gz](${BASE}/duck-image-linux-arm64-musl.tar.gz) |
+          | macOS Intel | [duck-image-darwin-x64.tar.gz](${BASE}/duck-image-darwin-x64.tar.gz) |
+          | macOS Apple Silicon | [duck-image-darwin-arm64.tar.gz](${BASE}/duck-image-darwin-arm64.tar.gz) |
 
           ## Quick start
 
-          - **Windows**: unzip and double-click \`duckai-cpa.exe\` (console window stays open).
-          - **Linux / macOS**: \`tar -xzf <archive>\`, then \`chmod +x duckai-cpa && ./duckai-cpa\`.
+          - **Windows**: unzip and double-click \`duck-image.exe\` (console window stays open).
+          - **Linux / macOS**: \`tar -xzf <archive>\`, then \`chmod +x duck-image && ./duck-image\`.
           - First start creates \`data/config.json\` and prints an admin token + default API key once.
           - Admin console: http://127.0.0.1:8787/admin/ — data directory: next to the binary (\`data/\`).
           - Binaries are unsigned: Windows SmartScreen / macOS Gatekeeper may warn.

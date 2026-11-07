@@ -30,40 +30,40 @@ jobs:
           - name: windows-x64
             os: windows-latest
             target: bun-windows-x64
-            artifact: duckai-cpa-windows-x64
-            binary: dist/windows-x64/duckai-cpa.exe
+            artifact: duck-image-windows-x64
+            binary: dist/windows-x64/duck-image.exe
           - name: linux-x64
             os: ubuntu-latest
             target: bun-linux-x64
-            artifact: duckai-cpa-linux-x64
-            binary: dist/linux-x64/duckai-cpa
+            artifact: duck-image-linux-x64
+            binary: dist/linux-x64/duck-image
           - name: linux-x64-musl
             os: ubuntu-latest
             target: bun-linux-x64-musl
-            artifact: duckai-cpa-linux-x64-musl
-            binary: dist/linux-x64-musl/duckai-cpa
+            artifact: duck-image-linux-x64-musl
+            binary: dist/linux-x64-musl/duck-image
             skip_runtime_smoke: true
           - name: linux-arm64
             os: ubuntu-24.04-arm
             target: bun-linux-arm64
-            artifact: duckai-cpa-linux-arm64
-            binary: dist/linux-arm64/duckai-cpa
+            artifact: duck-image-linux-arm64
+            binary: dist/linux-arm64/duck-image
           - name: linux-arm64-musl
             os: ubuntu-24.04-arm
             target: bun-linux-arm64-musl
-            artifact: duckai-cpa-linux-arm64-musl
-            binary: dist/linux-arm64-musl/duckai-cpa
+            artifact: duck-image-linux-arm64-musl
+            binary: dist/linux-arm64-musl/duck-image
             skip_runtime_smoke: true
           - name: darwin-x64
             os: macos-15-intel
             target: bun-darwin-x64
-            artifact: duckai-cpa-darwin-x64
-            binary: dist/darwin-x64/duckai-cpa
+            artifact: duck-image-darwin-x64
+            binary: dist/darwin-x64/duck-image
           - name: darwin-arm64
             os: macos-15
             target: bun-darwin-arm64
-            artifact: duckai-cpa-darwin-arm64
-            binary: dist/darwin-arm64/duckai-cpa
+            artifact: duck-image-darwin-arm64
+            binary: dist/darwin-arm64/duck-image
 
     steps:
       - name: Checkout

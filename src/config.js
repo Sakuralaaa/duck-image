@@ -1155,7 +1155,19 @@ export function isPlaceholderAdminToken(token) {
  *   logger?: {info?: Function, warn?: Function, debug?: Function}
  * }} [options]
  */
-export async function loadConfig({ env = process.env, rootDir = PROJECT_ROOT, logger = null } = {}) {
+/**
+ * Duck Image 改名后的环境变量别名：DUCK_IMAGE_X 等价于 DUCKAI_CPA_X（旧名优先级更低，同时设置时以 DUCK_IMAGE_ 为准）。
+ */
+export function withEnvAliases(env = process.env) {
+  const out = { ...env };
+  for (const [key, value] of Object.entries(env)) {
+    if (key.startsWith('DUCK_IMAGE_') && value !== undefined) out[`DUCKAI_CPA_${key.slice('DUCK_IMAGE_'.length)}`] = value;
+  }
+  return out;
+}
+
+export async function loadConfig({ env: rawEnv = process.env, rootDir = PROJECT_ROOT, logger = null } = {}) {
+  const env = withEnvAliases(rawEnv);
   const paths = resolvePaths(env, rootDir);
 
   const example = await readJsonFileSafe(paths.examplePath, {}, (error) =>

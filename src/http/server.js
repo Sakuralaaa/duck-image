@@ -23,7 +23,7 @@ import { createRouter } from '../app/http/router.js';
 import { createRequestContextFactory } from '../app/http/context.js';
 import { createAppRoutes } from '../app/routes/index.js';
 
-const SERVICE_NAME = 'duckai-cpa';
+const SERVICE_NAME = 'duck-image';
 
 /* ------------------------------------------------------------------ */
 /* Package metadata                                                    */

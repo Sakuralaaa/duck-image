@@ -693,7 +693,7 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <Label htmlFor="settings-gallery-save">保存到图库 images.saveGallery</Label>
-                    <p className="text-[11px] text-muted-foreground">所有生成的图片写入 data/images，在「生图工作台」浏览；收藏的图不会被自动清理。</p>
+                    <p className="text-[11px] text-muted-foreground">所有生成的图片写入 data/images，在「Duck Image → 图库」浏览；收藏的图不会被自动清理。</p>
                   </div>
                   <Switch
                     id="settings-gallery-save"

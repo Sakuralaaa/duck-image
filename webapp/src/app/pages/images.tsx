@@ -1,32 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from 'react';
 import { toast } from 'sonner';
 import {
+  ArrowUp,
   Copy,
   Download,
   Heart,
-  ImagePlus,
   Images as ImagesIcon,
   Loader2,
+  Plus,
   RefreshCw,
   Repeat2,
   Search,
-  Sparkles,
+  Square,
   Trash2,
   Upload,
-  Wand2,
   X
 } from 'lucide-react';
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, authHeaders } from '@/app/lib/api';
-import { formatDateTime, formatRelative } from '@/app/lib/format';
+import { formatDateTime } from '@/app/lib/format';
 import type { ModelInfo } from '@/app/lib/types';
-import { PageHeader } from '@/app/components/page-header';
 import { EmptyState } from '@/app/components/empty-state';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
@@ -287,7 +284,7 @@ function ResultTile({
 }) {
   return (
     <div className="group relative">
-      <button type="button" onClick={onOpen} className="surface surface-hover checker block w-full overflow-hidden">
+      <button type="button" onClick={onOpen} className="checker block w-full overflow-hidden rounded-xl">
         <img src={image.dataUrl} alt={image.prompt || '生成结果'} className="w-full object-contain" />
       </button>
       <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-0 transition group-hover:opacity-100">
@@ -415,6 +412,80 @@ function ImageLightbox({
   );
 }
 
+function FanThumb({ item, large }: { item: GalleryItem; large: boolean }) {
+  const { src } = useGalleryImage(item.id);
+  return (
+    <div
+      className={cn(
+        'checker overflow-hidden rounded-2xl border border-border bg-card shadow-[0_12px_30px_-16px_rgb(28_25_23/0.55)]',
+        large ? 'h-48 w-36 sm:h-56 sm:w-40' : 'h-40 w-28 sm:h-44 sm:w-32'
+      )}
+    >
+      {src ? <img src={src} alt={item.prompt} className="h-full w-full object-cover" /> : null}
+    </div>
+  );
+}
+
+function MenuGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function Pill({
+  active,
+  disabled,
+  onClick,
+  children
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'rounded-full border px-2.5 py-1 text-xs transition disabled:opacity-40',
+        active ? 'border-foreground bg-foreground text-background' : 'border-border hover:border-foreground'
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ParamChip({ children, onClear }: { children: React.ReactNode; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1">
+      {children}
+      <button type="button" aria-label="移除" onClick={onClear} className="hover:text-foreground">
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
+
+interface Turn {
+  key: string;
+  prompt: string;
+  fullPrompt: string;
+  meta: string;
+  count: number;
+  status: 'pending' | 'done' | 'error';
+  images: GeneratedImage[];
+  error?: string;
+  model: string | null;
+  modelDisplayName: string | null;
+  aspect: string | null;
+}
+
 /* ------------------------------------------------------------------ */
 /* 页面                                                                */
 /* ------------------------------------------------------------------ */
@@ -434,8 +505,12 @@ export function ImagesPage() {
   // 生成状态
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [result, setResult] = useState<GenerateResponse | null>(null);
-  const [resultPrompt, setResultPrompt] = useState('');
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [view, setView] = useState<'create' | 'gallery'>('create');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const feedEnd = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // 图库
@@ -530,7 +605,7 @@ export function ImagesPage() {
       const file = new File([blob], 'reference.png', { type: blob.type || 'image/png' });
       await addReferenceFiles([file]);
       toast.success('已加入参考图');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setView('create');
     } catch {
       const dataUrl = src.startsWith('data:') ? src : await blobToDataUrl(await (await fetch(src)).blob());
       setReferences((current) => [...current, dataUrl].slice(0, MAX_REFERENCES));
@@ -545,15 +620,36 @@ export function ImagesPage() {
   }, [prompt, style]);
 
   const generate = useCallback(async () => {
-    if (!fullPrompt) {
-      toast.error('先写点提示词');
-      return;
-    }
+    if (!fullPrompt) return;
     if (busy) return;
     const controller = new AbortController();
     abortRef.current = controller;
+    const key = `${Date.now()}`;
+    const metaParts = [
+      aspect !== 'auto' ? aspect : '',
+      STYLES.find((entry) => entry.id === style && entry.id !== 'none')?.label || '',
+      count > 1 ? `${count} 张` : '',
+      references.length ? `${references.length} 张参考图` : ''
+    ].filter(Boolean);
+    setTurns((current) => [
+      ...current,
+      {
+        key,
+        prompt: prompt.trim(),
+        fullPrompt,
+        meta: metaParts.join(' · '),
+        count,
+        status: 'pending',
+        images: [],
+        model: model || null,
+        modelDisplayName: null,
+        aspect: aspect === 'auto' ? null : aspect
+      }
+    ]);
+    setPrompt('');
     setBusy(true);
-    setResultPrompt(fullPrompt);
+    const sentReferences = references;
+    setReferences([]);
     try {
       const response = await apiPost<GenerateResponse>(
         '/images/generate',
@@ -562,25 +658,49 @@ export function ImagesPage() {
           model: model || undefined,
           n: count,
           aspect: aspect === 'auto' ? undefined : aspect,
-          references
+          references: sentReferences
         },
         { signal: controller.signal }
       );
-      setResult(response);
-      if (response.partialError) toast.warning(`只生成了 ${response.images.length} 张：${response.partialError}`);
-      else toast.success(`生成完成 · ${(response.elapsedMs / 1000).toFixed(1)}s`);
+      setTurns((current) =>
+        current.map((turn) =>
+          turn.key === key
+            ? { ...turn, status: 'done', images: response.images, model: response.model, modelDisplayName: response.modelDisplayName }
+            : turn
+        )
+      );
+      if (response.partialError) toast.warning(`只生成了 ${response.images.length} 张，详情见日志`);
       void loadGallery();
     } catch (error) {
-      if ((error as Error)?.name === 'AbortError') {
-        toast.info('已取消（上游可能仍会完成这次生成）');
-      } else if (!(error as ApiError)?.handled) {
-        toast.error((error as Error).message || '生成失败');
-      }
+      const aborted = (error as Error)?.name === 'AbortError';
+      const message = aborted ? '已取消' : (error as Error).message || '未知错误';
+      setTurns((current) => current.map((turn) => (turn.key === key ? { ...turn, status: 'error', error: message } : turn)));
+      if (!aborted && !(error as ApiError)?.handled) toast.error('生成失败，详情见日志');
     } finally {
       setBusy(false);
       abortRef.current = null;
     }
-  }, [aspect, busy, count, fullPrompt, loadGallery, model, references]);
+  }, [aspect, busy, count, fullPrompt, loadGallery, model, prompt, references, style]);
+
+  useEffect(() => {
+    feedEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [turns]);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+  }, [prompt]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [menuOpen]);
 
   const toggleFavorite = useCallback(async (item: GalleryItem) => {
     try {
@@ -598,7 +718,8 @@ export function ImagesPage() {
     if (item.aspect) setAspect(item.aspect);
     if (item.model) setModel(item.model);
     setLightbox(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setView('create');
+    window.setTimeout(() => textareaRef.current?.focus(), 50);
   }, []);
 
   const onPaste = useCallback(
@@ -616,357 +737,345 @@ export function ImagesPage() {
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       setDragging(false);
+      setView('create');
       if (event.dataTransfer?.files?.length) void addReferenceFiles(event.dataTransfer.files);
     },
     [addReferenceFiles]
   );
 
+
   const selectedModel = imageModels.find((entry) => entry.id === model);
+  const selectedStyle = STYLES.find((entry) => entry.id === style);
+  const hasTurns = turns.length > 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="生图工作台"
-        description="文生图 / 参考图生图 · 每张图自动进图库，API 生成的图也会出现在这里"
-        actions={
-          stats ? (
-            <div className="chip flex items-center gap-2 bg-card px-2.5 py-1 font-mono text-[11px]">
-              <ImagesIcon className="h-3.5 w-3.5" />
-              共 {stats.count} 张 · 今日 {stats.today} · {formatBytes(stats.bytes)}
-            </div>
-          ) : null
-        }
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]">
-        {/* ---------------- 左：参数 ---------------- */}
-        <Card className="h-fit xl:sticky xl:top-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Wand2 className="h-4 w-4" />
-              描述你想要的画面
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div
-              onDragOver={(event) => {
-                event.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={onDrop}
-              className={cn('relative', dragging && 'outline-dashed outline-2 outline-offset-4 outline-[hsl(var(--primary))]')}
-            >
-              <Textarea
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                onPaste={onPaste}
-                onKeyDown={(event) => {
-                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-                    event.preventDefault();
-                    void generate();
-                  }
-                }}
-                rows={5}
-                maxLength={4000}
-                placeholder="例如：一只戴着飞行员墨镜的柴犬坐在复古摩托车上，黄昏的海边公路，胶片质感"
-                className="resize-y text-[13.5px] leading-relaxed"
-              />
-              <div className="mt-1 flex justify-between font-mono text-[10.5px] text-muted-foreground">
-                <span>Ctrl/⌘ + Enter 生成 · 可粘贴/拖入参考图</span>
-                <span>{prompt.length}/4000</span>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-muted-foreground">风格</div>
-              <div className="flex flex-wrap gap-1.5">
-                {STYLES.map((entry) => (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    onClick={() => setStyle(entry.id)}
-                    className={cn(
-                      'chip px-2 py-0.5 text-xs transition',
-                      style === entry.id ? 'border-[color:var(--rule)] bg-foreground font-semibold text-background' : 'bg-card hover:bg-muted'
-                    )}
-                  >
-                    {entry.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-muted-foreground">画幅</div>
-              <div className="grid grid-cols-4 gap-1.5">
-                {ASPECTS.map((entry) => (
-                  <button
-                    key={entry.value}
-                    type="button"
-                    onClick={() => setAspect(entry.value)}
-                    className={cn(
-                      'chip flex flex-col items-center gap-1 px-1 py-1.5 text-[11px] transition',
-                      aspect === entry.value ? 'bg-accent font-semibold text-accent-foreground' : 'bg-card hover:bg-muted'
-                    )}
-                  >
-                    <span
-                      className="block rounded-[2px] border-[1.5px] border-current"
-                      style={{ width: entry.w, height: entry.h, borderStyle: entry.value === 'auto' ? 'dashed' : 'solid' }}
-                    />
-                    <span className="font-mono">{entry.label}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">duck.ai 不接受尺寸参数，画幅会作为提示交给模型，结果可能有偏差。</p>
-            </div>
-
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-              <div>
-                <div className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-muted-foreground">模型</div>
-                <Select value={model} onValueChange={setModel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择模型" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {imageModels.map((entry) => (
-                      <SelectItem key={entry.id} value={entry.id} disabled={entry.available === false}>
-                        {entry.display_name || entry.name || entry.id}
-                        {entry.paid ? ' · 付费' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <div className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-wide text-muted-foreground">张数</div>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4].map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setCount(value)}
-                      className={cn(
-                        'chip h-9 w-9 font-mono text-sm font-bold transition',
-                        count === value ? 'bg-accent text-accent-foreground' : 'bg-card hover:bg-muted'
-                      )}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {selectedModel?.paid ? (
-              <p className="text-[11px] text-amber-700 dark:text-amber-300">付费模型需要绑定订阅的身份。</p>
-            ) : null}
-
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                  参考图 {references.length}/{MAX_REFERENCES}
-                </span>
-                {references.length ? (
-                  <button type="button" className="text-[11px] text-muted-foreground hover:text-foreground" onClick={() => setReferences([])}>
-                    清空
-                  </button>
-                ) : null}
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {references.map((src, index) => (
-                  <div key={`${index}-${src.length}`} className="tile checker group relative aspect-square overflow-hidden">
-                    <img src={src} alt={`参考图 ${index + 1}`} className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      aria-label="移除参考图"
-                      onClick={() => setReferences((current) => current.filter((_, i) => i !== index))}
-                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-[2px] border border-border bg-card opacity-0 transition group-hover:opacity-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-                {references.length < MAX_REFERENCES ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInput.current?.click()}
-                    className="field flex aspect-square flex-col items-center justify-center gap-1 border-dashed text-[10.5px] text-muted-foreground transition hover:text-foreground"
-                  >
-                    <Upload className="h-4 w-4" />
-                    上传
-                  </button>
-                ) : null}
-              </div>
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(event) => {
-                  if (event.target.files) void addReferenceFiles(event.target.files);
-                  event.target.value = '';
-                }}
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">有参考图时会基于它修改或延展；上游会把参考图缩到 512px。</p>
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <Button className="h-11 flex-1 text-[15px]" disabled={busy || !prompt.trim()} onClick={() => void generate()}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {busy ? `生成中 ${(elapsed / 1000).toFixed(1)}s` : `生成 ${count} 张`}
-              </Button>
-              {busy ? (
-                <Button variant="outline" className="h-11" onClick={() => abortRef.current?.abort()}>
-                  取消
-                </Button>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ---------------- 右：结果 + 图库 ---------------- */}
-        <div className="min-w-0 space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ImagePlus className="h-4 w-4" />
-                本次结果
-              </CardTitle>
-              {result ? (
-                <span className="font-mono text-[11px] text-muted-foreground">
-                  {result.modelDisplayName || result.model} · {(result.elapsedMs / 1000).toFixed(1)}s
-                  {result.identityLabel ? ` · ${result.identityLabel}` : ''}
-                </span>
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              {busy ? (
-                <div className={cn('grid gap-4', count > 1 ? 'sm:grid-cols-2' : '')}>
-                  {Array.from({ length: count }).map((_, index) => (
-                    <div key={index} className="tile checker flex aspect-square flex-col items-center justify-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      <span className="font-mono text-[11px]">第 {index + 1} 张 · 排队/生成中</span>
-                    </div>
-                  ))}
-                </div>
-              ) : result?.images.length ? (
-                <div className={cn('grid gap-4', result.images.length > 1 ? 'sm:grid-cols-2' : 'mx-auto max-w-2xl')}>
-                  {result.images.map((image, index) => (
-                    <ResultTile
-                      key={image.id || index}
-                      image={{ ...image, prompt: resultPrompt }}
-                      onOpen={() =>
-                        setLightbox({
-                          id: image.id || '',
-                          createdAt: image.createdAt || Date.now(),
-                          source: 'admin',
-                          prompt: resultPrompt,
-                          model: result.model,
-                          modelDisplayName: result.modelDisplayName,
-                          format: image.format,
-                          mimeType: image.mimeType || 'image/png',
-                          bytes: image.bytes || 0,
-                          width: image.width ?? null,
-                          height: image.height ?? null,
-                          aspect: result.aspect,
-                          keyLabel: null,
-                          referenceCount: image.referenceCount || 0,
-                          favorite: Boolean(image.favorite),
-                          dataUrl: image.dataUrl
-                        })
-                      }
-                      onUseAsReference={() => void addReferenceFromSrc(image.dataUrl)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState icon={Sparkles} title="还没有生成" description="在左边写下提示词，选个风格和画幅，点生成。" />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-col gap-3 space-y-0 pb-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ImagesIcon className="h-4 w-4" />
-                图库
-              </CardTitle>
-              <div className="flex flex-wrap items-center gap-2">
-                <form
-                  className="relative"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    setAppliedQuery(query.trim());
-                  }}
-                >
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索提示词" className="h-8 w-44 pl-8 text-xs" />
-                </form>
-                <Button
-                  size="sm"
-                  variant={favoritesOnly ? 'default' : 'outline'}
-                  onClick={() => setFavoritesOnly((value) => !value)}
-                >
-                  <Heart className={cn('h-3.5 w-3.5', favoritesOnly ? 'fill-current' : '')} />
-                  收藏
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => void loadGallery()} aria-label="刷新">
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setConfirmClear(true)} disabled={!items.length}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                  清空
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {stats && !stats.saveGallery ? (
-                <p className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-                  图库保存已关闭（设置 → images.saveGallery），新生成的图片不会出现在这里。
-                </p>
-              ) : null}
-              {loading ? (
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                </div>
-              ) : items.length ? (
-                <>
-                  <div className="columns-2 gap-3 sm:columns-3 2xl:columns-4 [&>*]:mb-3 [&>*]:break-inside-avoid">
-                    {items.map((item) => (
-                      <GalleryThumb
-                        key={item.id}
-                        item={item}
-                        onOpen={() => setLightbox(item)}
-                        onToggleFavorite={() => void toggleFavorite(item)}
-                      />
-                    ))}
-                  </div>
-                  {hasMore ? (
-                    <div className="mt-2 flex justify-center">
-                      <Button variant="outline" size="sm" onClick={() => void loadGallery({ append: true })}>
-                        加载更多
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-center font-mono text-[11px] text-muted-foreground">
-                      {stats?.lastAt ? `最近一张 ${formatRelative(stats.lastAt)}` : ''}
-                      {stats?.retentionDays ? ` · 保留 ${stats.retentionDays} 天` : ' · 永久保留'}
-                      {stats?.maxItems ? ` · 最多 ${stats.maxItems} 张（收藏不计）` : ''}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <EmptyState
-                  icon={ImagesIcon}
-                  title={appliedQuery || favoritesOnly ? '没有匹配的图片' : '图库是空的'}
-                  description={appliedQuery || favoritesOnly ? '换个关键词或取消收藏筛选。' : '在这里或通过 /v1/images/generations 生成的图片都会保存到图库。'}
-                />
-              )}
-            </CardContent>
-          </Card>
+    <div
+      className="relative mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-3xl flex-col"
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget === event.target) setDragging(false);
+      }}
+      onDrop={onDrop}
+    >
+      {/* 顶部：极简标题 + 图库切换 */}
+      <div className="flex items-center justify-between pb-2">
+        <div className="eyebrow">Duck Image</div>
+        <div className="flex items-center gap-1 text-sm">
+          <button
+            type="button"
+            onClick={() => setView('create')}
+            className={cn('px-2 py-1 transition', view === 'create' ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground')}
+          >
+            创作
+          </button>
+          <span className="text-muted-foreground/50">/</span>
+          <button
+            type="button"
+            onClick={() => setView('gallery')}
+            className={cn('px-2 py-1 transition', view === 'gallery' ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground')}
+          >
+            图库{stats?.count ? ` ${stats.count}` : ''}
+          </button>
         </div>
       </div>
+
+      {view === 'gallery' ? (
+        <div className="flex-1 pb-10">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <form
+              className="relative flex-1"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setAppliedQuery(query.trim());
+              }}
+            >
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索提示词" className="h-9 pl-8" />
+            </form>
+            <Button size="sm" variant={favoritesOnly ? 'default' : 'ghost'} onClick={() => setFavoritesOnly((value) => !value)}>
+              <Heart className={cn('h-3.5 w-3.5', favoritesOnly ? 'fill-current' : '')} />
+              收藏
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirmClear(true)} disabled={!items.length}>
+              <Trash2 className="h-3.5 w-3.5" />
+              清空
+            </Button>
+          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : items.length ? (
+            <>
+              <div className="columns-2 gap-3 sm:columns-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
+                {items.map((item) => (
+                  <GalleryThumb key={item.id} item={item} onOpen={() => setLightbox(item)} onToggleFavorite={() => void toggleFavorite(item)} />
+                ))}
+              </div>
+              {hasMore ? (
+                <div className="mt-2 flex justify-center">
+                  <Button variant="ghost" size="sm" onClick={() => void loadGallery({ append: true })}>
+                    加载更多
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <EmptyState
+              icon={ImagesIcon}
+              title={appliedQuery || favoritesOnly ? '没有匹配的图片' : '图库是空的'}
+              description={appliedQuery || favoritesOnly ? '换个关键词或取消收藏筛选。' : '生成的图片都会自动收进这里。'}
+            />
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-1 flex-col">
+          {hasTurns ? (
+            <div className="flex-1 space-y-10 pb-6 pt-4">
+              {turns.map((turn) => (
+                <div key={turn.key} className="space-y-3">
+                  <div className="flex justify-end">
+                    <div className="max-w-[85%] rounded-2xl bg-muted px-4 py-2.5 text-[14.5px] leading-relaxed">
+                      {turn.prompt}
+                      {turn.meta ? <div className="mt-1 text-[11.5px] text-muted-foreground">{turn.meta}</div> : null}
+                    </div>
+                  </div>
+                  {turn.status === 'pending' ? (
+                    <div className={cn('grid gap-3', turn.count > 1 ? 'grid-cols-2' : 'max-w-md')}>
+                      {Array.from({ length: turn.count }).map((_, index) => (
+                        <div key={index} className="checker flex aspect-square items-center justify-center rounded-xl text-muted-foreground">
+                          <div className="flex flex-col items-center gap-2 text-xs">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            {(elapsed / 1000).toFixed(0)}s
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : turn.status === 'error' ? (
+                    <div className="flex items-center gap-2 text-sm text-destructive">
+                      <X className="h-4 w-4" />
+                      生成失败：{turn.error}
+                      <a href="#/logs" className="underline underline-offset-4">看日志</a>
+                    </div>
+                  ) : (
+                    <div className={cn('grid gap-3', turn.images.length > 1 ? 'grid-cols-2' : 'max-w-xl')}>
+                      {turn.images.map((image, index) => (
+                        <ResultTile
+                          key={image.id || index}
+                          image={{ ...image, prompt: turn.prompt }}
+                          onOpen={() =>
+                            setLightbox({
+                              id: image.id || '',
+                              createdAt: image.createdAt || Date.now(),
+                              source: 'admin',
+                              prompt: turn.fullPrompt,
+                              model: turn.model,
+                              modelDisplayName: turn.modelDisplayName,
+                              format: image.format,
+                              mimeType: image.mimeType || 'image/png',
+                              bytes: image.bytes || 0,
+                              width: image.width ?? null,
+                              height: image.height ?? null,
+                              aspect: turn.aspect,
+                              keyLabel: null,
+                              referenceCount: image.referenceCount || 0,
+                              favorite: Boolean(image.favorite),
+                              dataUrl: image.dataUrl
+                            })
+                          }
+                          onUseAsReference={() => void addReferenceFromSrc(image.dataUrl)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={feedEnd} />
+            </div>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center pb-10 pt-6 text-center">
+              <h1 className="slant text-[30px] font-bold leading-tight sm:text-[40px]">给你的下一幅画，留一个位置。</h1>
+              {items.length ? (
+                <div className="mt-10 flex items-center justify-center">
+                  {items.slice(0, 5).map((item, index, list) => {
+                    const mid = (list.length - 1) / 2;
+                    const offset = index - mid;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setLightbox(item)}
+                        className="relative -mx-3 transition hover:z-20 hover:-translate-y-2"
+                        style={{ transform: `rotate(${offset * 5}deg) translateY(${Math.abs(offset) * 10}px)`, zIndex: 10 - Math.abs(offset) }}
+                      >
+                        <FanThumb item={item} large={offset === 0} />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+              <p className="mt-10 text-sm text-muted-foreground">写一句话描述画面；点 + 可以上传参考图、换画幅和风格。</p>
+            </div>
+          )}
+
+          {/* 输入框 */}
+          <div className="sticky bottom-4 z-20 pb-2">
+            {dragging ? (
+              <div className="mb-2 rounded-xl border border-dashed border-[color:hsl(var(--brand))] bg-card py-3 text-center text-sm text-brand">
+                松手即可作为参考图
+              </div>
+            ) : null}
+            <div className="rounded-2xl border border-[color:hsl(var(--input))] bg-card px-3 pb-2.5 pt-3 shadow-[0_10px_30px_-18px_rgb(28_25_23/0.45)]">
+              {references.length ? (
+                <div className="mb-2 flex gap-2 px-1">
+                  {references.map((src, index) => (
+                    <div key={`${index}-${src.length}`} className="group relative h-14 w-14 overflow-hidden rounded-lg border border-border">
+                      <img src={src} alt={`参考图 ${index + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        aria-label="移除参考图"
+                        onClick={() => setReferences((current) => current.filter((_, i) => i !== index))}
+                        className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="flex items-end gap-2">
+                <div className="relative" ref={menuRef}>
+                  <button
+                    type="button"
+                    aria-label="更多选项"
+                    onClick={() => setMenuOpen((value) => !value)}
+                    className={cn(
+                      'flex h-9 w-9 items-center justify-center rounded-full border border-[color:hsl(var(--input))] text-muted-foreground transition hover:text-foreground',
+                      menuOpen && 'bg-muted text-foreground'
+                    )}
+                  >
+                    <Plus className={cn('h-4 w-4 transition', menuOpen && 'rotate-45')} />
+                  </button>
+                  {menuOpen ? (
+                    <div className="absolute bottom-12 left-0 z-30 w-[320px] space-y-4 rounded-xl border border-border bg-popover p-4 text-left shadow-[0_16px_40px_-16px_rgb(28_25_23/0.5)]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fileInput.current?.click();
+                          setMenuOpen(false);
+                        }}
+                        disabled={references.length >= MAX_REFERENCES}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm hover:bg-muted disabled:opacity-50"
+                      >
+                        <Upload className="h-4 w-4" />
+                        上传参考图
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {references.length}/{MAX_REFERENCES}
+                        </span>
+                      </button>
+                      <MenuGroup label="画幅">
+                        {ASPECTS.map((entry) => (
+                          <Pill key={entry.value} active={aspect === entry.value} onClick={() => setAspect(entry.value)}>
+                            {entry.label}
+                          </Pill>
+                        ))}
+                      </MenuGroup>
+                      <MenuGroup label="风格">
+                        {STYLES.map((entry) => (
+                          <Pill key={entry.id} active={style === entry.id} onClick={() => setStyle(entry.id)}>
+                            {entry.label}
+                          </Pill>
+                        ))}
+                      </MenuGroup>
+                      <MenuGroup label="张数">
+                        {[1, 2, 3, 4].map((value) => (
+                          <Pill key={value} active={count === value} onClick={() => setCount(value)}>
+                            {value}
+                          </Pill>
+                        ))}
+                      </MenuGroup>
+                      {imageModels.filter((entry) => entry.available !== false).length > 1 ? (
+                        <MenuGroup label="模型">
+                          {imageModels.filter((entry) => entry.available !== false).map((entry) => (
+                            <Pill
+                              key={entry.id}
+                              active={model === entry.id}
+                              disabled={entry.available === false}
+                              onClick={() => setModel(entry.id)}
+                            >
+                              {entry.display_name || entry.name || entry.id}
+                            </Pill>
+                          ))}
+                        </MenuGroup>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <Textarea
+                  ref={textareaRef}
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  onPaste={onPaste}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                      event.preventDefault();
+                      void generate();
+                    }
+                  }}
+                  rows={1}
+                  maxLength={4000}
+                  placeholder={references.length ? '说说要怎么改这张图' : '描述你想要的图片，或点 + 上传图片进行编辑'}
+                  className="max-h-48 min-h-[36px] flex-1 resize-none !border-0 !bg-transparent px-1 py-1.5 text-[15px] leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                {busy ? (
+                  <button
+                    type="button"
+                    aria-label="停止"
+                    onClick={() => abortRef.current?.abort()}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background"
+                  >
+                    <Square className="h-3.5 w-3.5 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label="生成"
+                    disabled={!prompt.trim()}
+                    onClick={() => void generate()}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition disabled:opacity-30"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11 text-xs text-muted-foreground">
+                <span className="rounded-full bg-muted px-2.5 py-1 text-foreground">
+                  {selectedModel?.display_name || selectedModel?.name || 'GPT Image'}
+                </span>
+                {aspect !== 'auto' ? <ParamChip onClear={() => setAspect('auto')}>{aspect}</ParamChip> : null}
+                {selectedStyle && selectedStyle.id !== 'none' ? (
+                  <ParamChip onClear={() => setStyle('none')}>{selectedStyle.label}</ParamChip>
+                ) : null}
+                {count > 1 ? <ParamChip onClear={() => setCount(1)}>{count} 张</ParamChip> : null}
+              </div>
+            </div>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                if (event.target.files) void addReferenceFiles(event.target.files);
+                event.target.value = '';
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <ImageLightbox
         item={lightbox}
