@@ -1,6 +1,6 @@
 name: ci
 
-# 每次 push / PR：构建管理后台 + 全量离线测试（Node 24 + CJK 字体，上下文 PDF 测试需要中文字体）。
+# 每次 push / PR：构建管理后台 + 全量离线测试（Node 24 + 文泉驿正黑，与镜像一致；Noto CJK 体积大、PDF 子集化慢，会让 PDF 用例超时）。
 on:
   push:
     branches: [main]
@@ -26,7 +26,7 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install CJK fonts
-        run: sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk
+        run: sudo apt-get update -q && sudo apt-get install -y -q fonts-wqy-zenhei
       - run: npm ci --no-audit --no-fund
       - run: npm run build:web
       - run: npm test
