@@ -820,12 +820,12 @@ async function collectResponse(ctx, params) {
     typeof result?.content === 'string' && result.content ? result.content : collected.content;
   const clientTools = Array.isArray(params.clientTools) ? params.clientTools : [];
   const toolCalls = clientTools.length ? parseToolCalls(rawContent, clientTools) : [];
-  let content = stripToolCallText(cleanCitationText(rawContent), toolCalls.length > 0);
+  const sources = mergeSources(collected.sources, result?.sources);
+  let content = stripToolCallText(cleanCitationText(rawContent, sources), toolCalls.length > 0);
   if (toolCalls.length && /^```|^\{|^<tool_call>/i.test(String(rawContent || '').trim())) content = '';
   const reasoningText = cleanCitationText(
     typeof result?.reasoning === 'string' && result.reasoning ? result.reasoning : collected.reasoning
   );
-  const sources = mergeSources(collected.sources, result?.sources);
   if (!toolCalls.length) content += formatSourceLinks(sources);
   const images = mergeImages(collected.images, result?.images);
   return {
@@ -1141,7 +1141,7 @@ async function streamResponse(ctx, params) {
   let content = '';
   let reasoningText = '';
 
-  const textFilter = createCitationFilter();
+  const textFilter = createCitationFilter({ deferCitations: true });
   const reasoningFilter = createCitationFilter();
 
   let upstreamUsage = null;
@@ -1210,6 +1210,21 @@ async function streamResponse(ctx, params) {
       part: { type: 'output_text', text: '', annotations: [] }
     });
     return messageItem;
+  };
+
+  const flushPendingText = () => {
+    const tail = textFilter.process('', { flush: true, sources: sourcesStore });
+    if (!tail) return;
+    const item = ensureMessageItem();
+    content += tail;
+    emit('response.output_text.delta', {
+      response_id: responseId,
+      item_id: item.id,
+      output_index: messageIndex,
+      content_index: 0,
+      delta: tail,
+      logprobs: []
+    });
   };
 
   const rebuildAnnotations = () => {
@@ -1377,6 +1392,7 @@ async function streamResponse(ctx, params) {
     if (!gate.fired) throw error; // pre-stream failure → HTTP JSON error (429 etc.)
     writer = ctx.openSSE();
     flushPendingEvents();
+    flushPendingText();
     const normalized = toOpenAIError(error);
     ctx.log.error = normalized.message;
     emit('response.failed', {
@@ -1400,6 +1416,7 @@ async function streamResponse(ctx, params) {
     try {
       result = await chatPromise;
     } catch (error) {
+      flushPendingText();
       const normalized = toOpenAIError(error);
       ctx.log.error = normalized.message;
       emit('response.failed', {
@@ -1420,19 +1437,11 @@ async function streamResponse(ctx, params) {
   }
 
   try {
-    const textTail = textFilter.process('', { flush: true });
-    if (textTail) {
-      const item = ensureMessageItem();
-      content += textTail;
-      emit('response.output_text.delta', {
-        response_id: responseId,
-        item_id: item.id,
-        output_index: messageIndex,
-        content_index: 0,
-        delta: textTail,
-        logprobs: []
-      });
-    }
+    // 有些来源只在最终结果中返回，先合并再解析行内引用。
+    const finalSources = mergeSources(sourcesStore, result?.sources);
+    sourcesStore.length = 0;
+    sourcesStore.push(...finalSources);
+    flushPendingText();
     const reasoningTail = reasoningFilter.process('', { flush: true });
     if (reasoningTail) {
       const item = ensureReasoningItem();
@@ -1447,7 +1456,7 @@ async function streamResponse(ctx, params) {
     }
 
     if (!content && typeof result?.content === 'string' && result.content) {
-      const cleaned = cleanCitationText(result.content);
+      const cleaned = cleanCitationText(result.content, sourcesStore);
       if (cleaned) {
         const item = ensureMessageItem();
         content = cleaned;
@@ -1477,9 +1486,6 @@ async function streamResponse(ctx, params) {
     }
 
     // Merge sources that arrived only in the final result.
-    const finalSources = mergeSources(sourcesStore, result?.sources);
-    sourcesStore.length = 0;
-    sourcesStore.push(...finalSources);
     rebuildAnnotations();
     flushAnnotations();
 

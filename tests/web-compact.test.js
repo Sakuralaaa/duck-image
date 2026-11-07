@@ -124,7 +124,7 @@ function buildFetchMock() {
           { id: 'm1', role: 'user', content: '历史问题' },
           {
             id: 'm2', role: 'assistant',
-            content: '### 历史回答\n\n**重点。 ** <citation src="1,3"></citation>\n\n| 时间 | 事件 |\n| --- | --- |\n| 今天 | 更新 |\n\n`<citation src="2"></citation>`\n\n[危险链接](javascript:alert(1))'
+            content: '### 历史回答\n\n**重点。 ** <citation src="1,3"></citation>\n\n| 时间 | 事件 |\n| --- | --- |\n| 今天 | 更新 |\n\n`<citation src="2"></citation>`\n\n[危险链接](javascript:alert(1))\n\n' + String.raw`[\[5\]](<https://five.example/source>)`
           }
         ]
       });
@@ -277,6 +277,8 @@ test('compact 前端：模型上下文行、手动压缩 loading/成功、summar
     assert.match(reply.textContent, /\[1\]\[3\]/);
     assert.equal(reply.querySelector('code')?.textContent, '<citation src="2"></citation>');
     assert.ok(!reply.querySelector('a[href^="javascript:"]'));
+    const citationLink = reply.querySelector('a[href="https://five.example/source"]');
+    assert.equal(citationLink?.textContent, '[5]');
     assert.equal(reply.querySelector('.lucide-bot'), null);
     assert.equal(env.byTestId('chat-message-user').querySelector('.lucide-user'), null);
     await env.waitForTestId('compact-session');

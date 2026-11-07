@@ -61,6 +61,22 @@ async function postMessage(baseUrl, sessionId, body) {
   });
 }
 
+test('连接测试的流式引用按来源 id 输出可点击链接', async () => {
+  const duck = new MockDuckClient();
+  duck.enqueueChat({
+    textDeltas: ['答案', '<citation src="5"></citation>', '结束'],
+    sources: [{ id: 5, url: 'https://five.example/source', title: '来源五' }]
+  });
+  await withServer({ duck }, async ({ baseUrl }) => {
+    const created = await createSession(baseUrl, { model: 'gpt-6-luna', webSearch: true });
+    const { events } = await postMessage(baseUrl, created.json.session.id, { content: '搜索' });
+    const payloads = jsonEvents(events);
+    const text = payloads.filter((event) => event.type === 'delta').map((event) => event.text).join('');
+    assert.equal(text, String.raw`答案[\[5\]](<https://five.example/source>)结束`);
+    assert.equal(payloads.find((event) => event.type === 'done').message.content, text);
+  });
+});
+
 test('sessions CRUD：创建(201)→列表→详情→PATCH→删除', async () => {
   const duck = new MockDuckClient();
   await withServer({ duck }, async ({ baseUrl }) => {

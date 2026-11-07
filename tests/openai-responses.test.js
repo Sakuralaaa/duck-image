@@ -246,6 +246,28 @@ test('流式：web_search → output_text.annotation.added（url_citation）+ co
   });
 });
 
+test('Responses 的流式及非流式行内引用链接到来源，而非按列表位置猜测', async () => {
+  for (const stream of [false, true]) {
+    const sources = [{ id: 5, url: 'https://five.example/source', title: '来源五' }];
+    const deltas = ['回答', '<cita', 'tion src="5"></citation>', '完毕'];
+    const duck = newDuck({ textDeltas: deltas, result: { content: deltas.join(''), sources, finishReason: 'stop' } });
+    await withServer({ duck }, async ({ baseUrl }) => {
+      const body = { model: 'gpt-6-luna', stream, input: '搜索' };
+      let text;
+      if (stream) {
+        const { events } = await collectSSE(baseUrl, '/v1/responses', { body });
+        const payloads = streamJson(events);
+        text = payloads.filter((event) => event.type === 'response.output_text.delta').map((event) => event.delta).join('');
+        assert.equal(text, payloads.at(-1).response.output_text);
+      } else {
+        const res = await v1Request(baseUrl, '/v1/responses', { method: 'POST', body });
+        text = res.json.output_text;
+      }
+      assert.ok(text.includes(String.raw`回答[\[5\]](<https://five.example/source>)完毕`));
+    });
+  }
+});
+
 test('流式：image_generation → response.image_generation_call.* 事件 + 最终 output item', async () => {
   const duck = newDuck({
     textDeltas: ['好的'],

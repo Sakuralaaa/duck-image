@@ -518,7 +518,7 @@ async function generateAssistantReply(ctx, params) {
 
   const assistantMessageId = generateId('msg_');
   const startedAt = Date.now();
-  const textFilter = createCitationFilter();
+  const textFilter = createCitationFilter({ deferCitations: true });
   const reasoningFilter = createCitationFilter();
   const collected = { content: '', reasoning: '', sources: [], images: [], usage: null };
   let sourcesSent = 0;
@@ -733,6 +733,11 @@ async function generateAssistantReply(ctx, params) {
     try {
       result = await chatPromise;
     } catch (error) {
+      const tail = textFilter.process('', { flush: true, sources: collected.sources });
+      if (tail) {
+        collected.content += tail;
+        dispatch({ type: 'delta', text: tail });
+      }
       const normalized = toOpenAIError(error);
       ctx.log.error = normalized.message;
       if (normalized.errorDetail) ctx.log.errorDetail = normalized.errorDetail;
@@ -760,7 +765,8 @@ async function generateAssistantReply(ctx, params) {
     result = outcome.value;
   }
 
-  const textTail = textFilter.process('', { flush: true });
+  collected.sources = mergeSources(collected.sources, result?.sources);
+  const textTail = textFilter.process('', { flush: true, sources: collected.sources });
   if (textTail) {
     collected.content += textTail;
     dispatch({ type: 'delta', text: textTail });
@@ -771,7 +777,7 @@ async function generateAssistantReply(ctx, params) {
     dispatch({ type: 'reasoning', text: reasoningTail });
   }
   if (!collected.content && typeof result?.content === 'string' && result.content) {
-    const cleaned = cleanCitationText(result.content);
+    const cleaned = cleanCitationText(result.content, collected.sources);
     if (cleaned) {
       collected.content = cleaned;
       dispatch({ type: 'delta', text: cleaned });
@@ -785,7 +791,6 @@ async function generateAssistantReply(ctx, params) {
     }
   }
 
-  collected.sources = mergeSources(collected.sources, result?.sources);
   dispatchFreshSources();
   collected.images = mergeImages(collected.images, result?.images);
   dispatchFreshImages();

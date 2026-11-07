@@ -23,7 +23,7 @@ import {
 } from './helpers/test-server.js';
 import { MockDuckClient, DEFAULT_SOURCES, PNG_1X1_B64 } from './helpers/mock-duck.js';
 import { DuckError } from '../src/duck/index.js';
-import { formatSourceLinks } from '../src/openai/chat.js';
+import { cleanCitationText, formatSourceLinks } from '../src/openai/chat.js';
 
 const ADMIN = {};
 
@@ -37,6 +37,17 @@ test('来源正文只包含安全的 HTTP(S) 链接，标题中的 Markdown 符�
   assert.ok(text.includes('\\[测试\\]'));
   assert.ok(!text.includes('javascript:'));
   assert.ok(!text.includes('password'));
+});
+
+test('行内引用按来源 id 生成链接，不猜测未知、冲突或不安全的来源', () => {
+  const text = cleanCitationText('<citation src="4, 5, 6, 7"></citation>', [
+    { id: 5, url: 'https://five.example/path' },
+    { id: 4, url: 'https://four.example/path' },
+    { id: 6, url: 'javascript:alert(1)' },
+    { id: 7, url: 'https://first.example/' },
+    { id: 7, url: 'https://second.example/' }
+  ]);
+  assert.equal(text, String.raw`[\[4\]](<https://four.example/path>)[\[5\]](<https://five.example/path>)[6][7]`);
 });
 
 function newDuck(chat = {}) {
@@ -604,5 +615,43 @@ test('流式 citation 滤波器：跨 chunk 拆分的引用标记也能正确清
     const text = objects.map((chunk) => chunk.choices?.[0]?.delta?.content || '').join('');
     assert.equal(text, '坏天[2]要下雨');
     assert.doesNotMatch(text, /<citation|<\/citation>/);
+  });
+});
+
+test('行内引用可点击：非流式和拆分的流式标记均匹配最终来源 id', async () => {
+  for (const stream of [false, true]) {
+    const sources = [
+      { id: 5, url: 'https://five.example/path', title: '来源五' },
+      { id: 4, url: 'https://four.example/path', title: '来源四' }
+    ];
+    const deltas = ['正文', '<cit', 'ation src="4, 5, 9"', '></citation>', '结束'];
+    const duck = newDuck({ textDeltas: deltas, result: { content: deltas.join(''), sources, finishReason: 'stop' } });
+    await withServer({ duck }, async ({ baseUrl }) => {
+      const body = { model: 'gpt-6-luna', stream, messages: [{ role: 'user', content: '搜索' }] };
+      let text;
+      if (stream) {
+        const { events } = await collectSSE(baseUrl, '/v1/chat/completions', { body });
+        text = events.map((event) => event.json?.choices?.[0]?.delta?.content || '').join('');
+      } else {
+        const res = await v1Request(baseUrl, '/v1/chat/completions', { method: 'POST', body });
+        text = res.json.choices[0].message.content;
+      }
+      assert.ok(text.includes(String.raw`[\[4\]](<https://four.example/path>)[\[5\]](<https://five.example/path>)[9]结束`));
+    });
+  }
+});
+
+test('流式出错时仍交付引用后的已生成文本', async () => {
+  const duck = newDuck({
+    textDeltas: ['前文', '<citation src="2"></citation>', '后文'],
+    errorAfterText: new DuckError('upstream failed', { status: 502, type: 'upstream_error' })
+  });
+  await withServer({ duck }, async ({ baseUrl }) => {
+    const { events } = await collectSSE(baseUrl, '/v1/chat/completions', {
+      body: { model: 'gpt-6-luna', stream: true, messages: [{ role: 'user', content: '搜索' }] }
+    });
+    const text = events.map((event) => event.json?.choices?.[0]?.delta?.content || '').join('');
+    assert.equal(text, '前文[2]后文');
+    assert.ok(events.some((event) => event.json?.error));
   });
 });

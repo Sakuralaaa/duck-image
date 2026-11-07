@@ -101,15 +101,35 @@ const MAX_SOURCES = 50;
 /* Citation handling                                                   */
 /* ------------------------------------------------------------------ */
 
-const COMPLETE_CITATION_RE = /<citation\b[^>]*?src\s*=\s*["']?([^"'\s>]+)["']?[^>]*>\s*<\/citation>/gi;
+const COMPLETE_CITATION_RE = /<citation\b[^>]*?src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>\s*<\/citation>/gi;
 const EMPTY_CITATION_RE = /<citation\b[^>]*>\s*<\/citation>/gi;
 const LOOSE_CITATION_TAG_RE = /<\/?citation\b[^>]*>/gi;
 
 /** Replace `<citation src="N"></citation>` markers in a complete text. */
-export function cleanCitationText(text) {
+export function cleanCitationText(text, sources = []) {
   if (typeof text !== 'string' || !text) return '';
+  const sourceUrls = new Map();
+  for (const source of sources) {
+    if (source?.id == null) continue;
+    const id = String(source.id);
+    let href = null;
+    try {
+      const url = new URL(source.url);
+      if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) href = url.href.replace(/>/g, '%3E');
+    } catch { /* 来源无效时只显示编号。 */ }
+    if (!href) continue;
+    if (sourceUrls.has(id) && sourceUrls.get(id) !== href) sourceUrls.set(id, null);
+    else if (!sourceUrls.has(id)) sourceUrls.set(id, href);
+  }
   return text
-    .replace(COMPLETE_CITATION_RE, (_match, src) => (src ? `[${src}]` : ''))
+    .replace(COMPLETE_CITATION_RE, (_match, doubleQuoted, singleQuoted, unquoted) => {
+      const ids = String(doubleQuoted ?? singleQuoted ?? unquoted ?? '').split(',').map((id) => id.trim()).filter(Boolean);
+      return ids.map((id) => {
+        const href = sourceUrls.get(id);
+        const label = id.replace(/[\\\[\]]/g, '\\$&');
+        return href ? `[\\[${label}\\]](<${href}>)` : `[${label}]`;
+      }).join('');
+    })
     .replace(EMPTY_CITATION_RE, '')
     .replace(LOOSE_CITATION_TAG_RE, '');
 }
@@ -121,7 +141,7 @@ const CITATION_PREFIX = '<citation';
  * a trailing fragment that could be the beginning of a marker is held back until
  * the next delta (or flushed at end of stream).
  */
-export function createCitationFilter() {
+export function createCitationFilter({ deferCitations = false } = {}) {
   let pending = '';
 
   function findHold(text) {
@@ -129,6 +149,7 @@ export function createCitationFilter() {
     for (;;) {
       const openIndex = text.indexOf(CITATION_PREFIX, searchFrom);
       if (openIndex === -1) break;
+      if (deferCitations) return text.length - openIndex;
       const closeIndex = text.indexOf('</citation>', openIndex);
       if (closeIndex === -1) return text.length - openIndex;
       searchFrom = closeIndex + '</citation>'.length;
@@ -140,22 +161,21 @@ export function createCitationFilter() {
   }
 
   return {
-    process(delta, { flush = false } = {}) {
+    process(delta, { flush = false, sources = [] } = {}) {
       if (typeof delta === 'string' && delta) pending += delta;
       if (!pending) return '';
       if (flush) {
-        const flushed = cleanCitationText(pending);
+        const flushed = cleanCitationText(pending, sources);
         pending = '';
         return flushed;
       }
-      let cleaned = pending.replace(COMPLETE_CITATION_RE, (_match, src) => (src ? `[${src}]` : ''));
-      cleaned = cleaned.replace(EMPTY_CITATION_RE, '');
-      const hold = findHold(cleaned);
+      const hold = findHold(pending);
       if (hold > 0) {
-        const out = cleaned.slice(0, cleaned.length - hold);
-        pending = cleaned.slice(cleaned.length - hold);
+        const out = cleanCitationText(pending.slice(0, pending.length - hold));
+        pending = pending.slice(pending.length - hold);
         return out;
       }
+      const cleaned = cleanCitationText(pending);
       pending = '';
       return cleaned;
     }
@@ -1397,12 +1417,12 @@ async function resolveChatCompletion(ctx, params) {
     typeof result?.content === 'string' && result.content ? result.content : collected.content;
   const clientTools = Array.isArray(params.clientTools) ? params.clientTools : [];
   const toolCalls = clientTools.length ? parseToolCalls(rawContent, clientTools) : [];
-  let content = stripToolCallText(cleanCitationText(rawContent), toolCalls.length > 0);
+  const sources = mergeSources(collected.sources, result?.sources);
+  let content = stripToolCallText(cleanCitationText(rawContent, sources), toolCalls.length > 0);
   if (toolCalls.length && /^```|^\{|^<tool_call>/i.test(String(rawContent || '').trim())) content = '';
   const reasoningText = cleanCitationText(
     typeof result?.reasoning === 'string' && result.reasoning ? result.reasoning : collected.reasoning
   );
-  const sources = mergeSources(collected.sources, result?.sources);
   if (!toolCalls.length) content += formatSourceLinks(sources);
   const images = mergeImages(collected.images, result?.images);
   const finishReason = toolCalls.length ? 'tool_calls' : result?.finishReason || collected.finishReason;
@@ -1599,8 +1619,15 @@ async function streamChatCompletion(ctx, params) {
   const collected = { content: '', reasoning: '', sources: [], images: [], usage: null, error: null };
   // v2.24：流式请求的 token 统计（在结束处生成，写入 ctx.log 供概览聚合）
   let streamUsage = null;
-  const textFilter = createCitationFilter();
+  const textFilter = createCitationFilter({ deferCitations: true });
   const reasoningFilter = createCitationFilter();
+  const flushPendingText = () => {
+    const tail = textFilter.process('', { flush: true, sources: collected.sources });
+    if (tail) {
+      collected.content += tail;
+      emitDelta({ content: tail });
+    }
+  };
   let annotationsSent = 0;
   const imagesSent = new Set();
   const gate = createFirstEventGate();
@@ -1712,6 +1739,7 @@ async function streamChatCompletion(ctx, params) {
     writer = ctx.openSSE();
     emitDelta({ role: 'assistant', content: '' });
     flushPendingChoices();
+    flushPendingText();
     sendStreamError(ctx, writer, error);
     return;
   }
@@ -1725,6 +1753,7 @@ async function streamChatCompletion(ctx, params) {
     try {
       result = await chatPromise;
     } catch (error) {
+      flushPendingText();
       sendStreamError(ctx, writer, error);
       return;
     }
@@ -1733,11 +1762,8 @@ async function streamChatCompletion(ctx, params) {
   }
 
   try {
-    const textTail = textFilter.process('', { flush: true });
-    if (textTail) {
-      collected.content += textTail;
-      emitDelta({ content: textTail });
-    }
+    collected.sources = mergeSources(collected.sources, result?.sources);
+    flushPendingText();
     const reasoningTail = reasoningFilter.process('', { flush: true });
     if (reasoningTail) {
       collected.reasoning += reasoningTail;
@@ -1745,7 +1771,7 @@ async function streamChatCompletion(ctx, params) {
     }
 
     if (!collected.content && typeof result?.content === 'string' && result.content) {
-      const cleaned = cleanCitationText(result.content);
+      const cleaned = cleanCitationText(result.content, collected.sources);
       if (cleaned) {
         collected.content = cleaned;
         emitDelta({ content: cleaned });
@@ -1759,7 +1785,6 @@ async function streamChatCompletion(ctx, params) {
       }
     }
 
-    collected.sources = mergeSources(collected.sources, result?.sources);
     collected.images = mergeImages(collected.images, result?.images);
     sendNewAnnotations();
     sendNewImages();
