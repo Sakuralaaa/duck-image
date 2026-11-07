@@ -98,18 +98,6 @@ const ASPECTS: Array<{ value: string; label: string; w: number; h: number }> = [
   { value: '21:9', label: '21:9', w: 22, h: 9 }
 ];
 
-const STYLES: Array<{ id: string; label: string; suffix: string }> = [
-  { id: 'none', label: '无', suffix: '' },
-  { id: 'photo', label: '写实摄影', suffix: '写实摄影风格，自然光，细节丰富，35mm 镜头，浅景深' },
-  { id: 'anime', label: '日系动漫', suffix: '日系动漫插画风格，干净线条，明亮配色，赛璐璐上色' },
-  { id: 'watercolor', label: '水彩', suffix: '水彩画风格，柔和晕染，纸张纹理，留白' },
-  { id: 'pixel', label: '像素', suffix: '16-bit 像素艺术风格，有限调色板，清晰像素边缘' },
-  { id: '3d', label: '3D 渲染', suffix: '3D 渲染，柔和全局光照，粘土质感，干净背景' },
-  { id: 'ink', label: '国风水墨', suffix: '中国水墨画风格，墨色浓淡变化，宣纸质感，写意' },
-  { id: 'flat', label: '扁平插画', suffix: '扁平矢量插画风格，几何形状，大色块，简洁' },
-  { id: 'cyber', label: '赛博朋克', suffix: '赛博朋克风格，霓虹灯光，雨夜城市，高对比度' }
-];
-
 const SOURCE_LABEL: Record<string, string> = {
   admin: '工作台',
   api: 'API',
@@ -493,7 +481,6 @@ interface Turn {
 export function ImagesPage() {
   // 生成参数
   const [prompt, setPrompt] = useState('');
-  const [style, setStyle] = useState('none');
   const [aspect, setAspect] = useState('auto');
   const [count, setCount] = useState(1);
   const [model, setModel] = useState('');
@@ -613,11 +600,8 @@ export function ImagesPage() {
   }, [addReferenceFiles]);
 
   const fullPrompt = useMemo(() => {
-    const preset = STYLES.find((entry) => entry.id === style);
-    const base = prompt.trim();
-    if (!base) return '';
-    return preset?.suffix ? `${base}\n\n风格：${preset.suffix}` : base;
-  }, [prompt, style]);
+    return prompt.trim();
+  }, [prompt]);
 
   const generate = useCallback(async () => {
     if (!fullPrompt) return;
@@ -627,7 +611,6 @@ export function ImagesPage() {
     const key = `${Date.now()}`;
     const metaParts = [
       aspect !== 'auto' ? aspect : '',
-      STYLES.find((entry) => entry.id === style && entry.id !== 'none')?.label || '',
       count > 1 ? `${count} 张` : '',
       references.length ? `${references.length} 张参考图` : ''
     ].filter(Boolean);
@@ -680,7 +663,7 @@ export function ImagesPage() {
       setBusy(false);
       abortRef.current = null;
     }
-  }, [aspect, busy, count, fullPrompt, loadGallery, model, prompt, references, style]);
+  }, [aspect, busy, count, fullPrompt, loadGallery, model, prompt, references]);
 
   useEffect(() => {
     feedEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -714,7 +697,6 @@ export function ImagesPage() {
 
   const reuse = useCallback((item: GalleryItem) => {
     setPrompt(item.prompt);
-    setStyle('none');
     if (item.aspect) setAspect(item.aspect);
     if (item.model) setModel(item.model);
     setLightbox(null);
@@ -745,7 +727,6 @@ export function ImagesPage() {
 
 
   const selectedModel = imageModels.find((entry) => entry.id === model);
-  const selectedStyle = STYLES.find((entry) => entry.id === style);
   const hasTurns = turns.length > 0;
 
   return (
@@ -917,7 +898,7 @@ export function ImagesPage() {
                   })}
                 </div>
               ) : null}
-              <p className="mt-10 text-sm text-muted-foreground">写一句话描述画面；点 + 可以上传参考图、换画幅和风格。</p>
+              <p className="mt-10 text-sm text-muted-foreground">写一句话描述画面；点 + 可以上传参考图、换画幅。</p>
             </div>
           )}
 
@@ -979,13 +960,6 @@ export function ImagesPage() {
                       <MenuGroup label="画幅">
                         {ASPECTS.map((entry) => (
                           <Pill key={entry.value} active={aspect === entry.value} onClick={() => setAspect(entry.value)}>
-                            {entry.label}
-                          </Pill>
-                        ))}
-                      </MenuGroup>
-                      <MenuGroup label="风格">
-                        {STYLES.map((entry) => (
-                          <Pill key={entry.id} active={style === entry.id} onClick={() => setStyle(entry.id)}>
                             {entry.label}
                           </Pill>
                         ))}
@@ -1056,9 +1030,6 @@ export function ImagesPage() {
                   {selectedModel?.display_name || selectedModel?.name || 'GPT Image'}
                 </span>
                 {aspect !== 'auto' ? <ParamChip onClear={() => setAspect('auto')}>{aspect}</ParamChip> : null}
-                {selectedStyle && selectedStyle.id !== 'none' ? (
-                  <ParamChip onClear={() => setStyle('none')}>{selectedStyle.label}</ParamChip>
-                ) : null}
                 {count > 1 ? <ParamChip onClear={() => setCount(1)}>{count} 张</ParamChip> : null}
               </div>
             </div>
