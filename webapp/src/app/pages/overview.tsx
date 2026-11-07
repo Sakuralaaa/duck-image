@@ -410,7 +410,7 @@ export function OverviewPage() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <a href="#/images" className="surface-hover block rounded-[4px]" title="打开生图工作台">
+            <a href="#/images" className="surface-hover block" title="打开生图工作台">
               <StatTile
                 label="今日生图"
                 value={formatNumber(data?.images?.today ?? 0)}

@@ -18,21 +18,21 @@ export function StatTile({
 }) {
   const toneClass =
     tone === 'primary'
-      ? 'bg-[color-mix(in_srgb,hsl(var(--primary))_22%,hsl(var(--card)))]'
+      ? 'border-t-[3px] border-t-[color:hsl(var(--brand))]'
       : tone === 'danger'
-        ? 'bg-[color-mix(in_srgb,#f87171_22%,hsl(var(--card)))]'
+        ? 'border-t-[3px] border-t-red-600'
         : tone === 'success'
-          ? 'bg-[color-mix(in_srgb,#34d399_20%,hsl(var(--card)))]'
+          ? 'border-t-[3px] border-t-emerald-600'
           : tone === 'warning'
-            ? 'bg-[color-mix(in_srgb,#fbbf24_24%,hsl(var(--card)))]'
-            : 'bg-card';
+            ? 'border-t-[3px] border-t-amber-500'
+            : 'border-t-[3px] border-t-[color:var(--rule)]';
   return (
-    <div className={cn('tile p-4', toneClass)} title={title}>
+    <div className={cn('tile bg-card p-4', toneClass)} title={title}>
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="truncate text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
         {Icon ? <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : null}
       </div>
-      <div className="mt-1.5 truncate text-xl font-bold italic tabular-nums tracking-tight sm:text-2xl" title={value}>
+      <div className="slant mt-1.5 truncate text-2xl font-semibold tabular-nums sm:text-[28px]" title={value}>
         {value}
       </div>
       {hint ? (

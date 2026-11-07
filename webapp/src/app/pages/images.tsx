@@ -688,7 +688,7 @@ export function ImagesPage() {
                     onClick={() => setStyle(entry.id)}
                     className={cn(
                       'chip px-2 py-0.5 text-xs transition',
-                      style === entry.id ? 'bg-accent font-semibold italic text-accent-foreground' : 'bg-card hover:bg-muted'
+                      style === entry.id ? 'border-[color:var(--rule)] bg-foreground font-semibold text-background' : 'bg-card hover:bg-muted'
                     )}
                   >
                     {entry.label}
@@ -780,7 +780,7 @@ export function ImagesPage() {
                       type="button"
                       aria-label="移除参考图"
                       onClick={() => setReferences((current) => current.filter((_, i) => i !== index))}
-                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-[3px] border-[1.5px] border-[color:var(--edge)] bg-card opacity-0 transition group-hover:opacity-100"
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-[2px] border border-border bg-card opacity-0 transition group-hover:opacity-100"
                     >
                       <X className="h-3 w-3" />
                     </button>

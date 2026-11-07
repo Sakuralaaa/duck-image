@@ -104,7 +104,7 @@ export function Sidebar({
       ) : null}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r-2 border-[color:var(--edge)] bg-[hsl(var(--side))] transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-[hsl(var(--side))] transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -120,7 +120,7 @@ export function Sidebar({
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2 scrollbar-thin" aria-label="主导航">
           {NAV_GROUPS.map((group) => (
             <div key={group.title}>
-              <div className="mb-1.5 px-2 font-mono text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+              <div className="mb-1.5 px-2 eyebrow">
                 {group.title}
               </div>
               <div className="space-y-1">
@@ -134,14 +134,14 @@ export function Sidebar({
                       onClick={onCloseMobile}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'flex items-center gap-2.5 border-2 border-transparent px-2.5 py-1.5 text-sm font-medium transition-colors',
-                        active ? 'nav-active font-semibold' : 'rounded-[4px] text-muted-foreground hover:bg-card hover:text-foreground'
+                        'flex items-center gap-2.5 px-2.5 py-1.5 text-sm font-medium transition-colors',
+                        active ? 'nav-active font-semibold' : 'text-muted-foreground hover:bg-card hover:text-foreground'
                       )}
                     >
                       <Icon className="h-4 w-4" />
                       {item.label}
                       {item.route === 'images' && !active ? (
-                        <span className="ml-auto rounded-[3px] border-[1.5px] border-[color:var(--edge)] bg-primary px-1 font-mono text-[9px] font-bold not-italic text-primary-foreground">
+                        <span className="ml-auto text-brand text-[9.5px] font-bold uppercase tracking-[0.14em]">
                           NEW
                         </span>
                       ) : null}

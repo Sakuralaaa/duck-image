@@ -1,74 +1,82 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/noto-sans-sc';
 @import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/source-serif-4';
+@import '@fontsource-variable/noto-serif-sc';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /*
- * Atoll 风格（neo-brutal）：粗边 + 硬阴影 + 点阵画布 + 等宽斜体按钮。
- * 配色与 Sakuralaaa/Atoll web/src/index.css 保持一致；shadcn 变量用 HSL 映射。
+ * 杂志风（Editorial）：衬线标题、米白纸色、1px 细分隔线、墨色按钮与砖红点缀。
+ * 配色与 Sakuralaaa/blog（Lagoon）的 html[data-style='editorial'] 令牌一致；shadcn 变量用 HSL 映射。
+ * 旧类名（surface / tile / field / chip / btn-brutal / nav-active / slant）保留，改为杂志风语义。
  */
 @layer base {
   :root {
-    --background: 42 35% 93%;
-    --foreground: 0 0% 8%;
-    --card: 43 100% 99%;
-    --card-foreground: 0 0% 8%;
-    --popover: 43 100% 99%;
-    --popover-foreground: 0 0% 8%;
-    --primary: 255 92% 76%;
-    --primary-foreground: 0 0% 8%;
-    --secondary: 42 42% 94%;
-    --secondary-foreground: 0 0% 12%;
-    --muted: 42 42% 94%;
-    --muted-foreground: 43 4% 35%;
-    --accent: 48 97% 77%;
-    --accent-foreground: 0 0% 8%;
-    --destructive: 0 91% 71%;
-    --destructive-foreground: 0 0% 8%;
-    --border: 41 22% 81%;
-    --input: 0 0% 8%;
-    --ring: 255 92% 76%;
-    --radius: 0.3rem;
+    --background: 43 43% 97%; /* #faf8f3 纸 */
+    --foreground: 24 10% 10%; /* #1c1917 墨 */
+    --card: 48 100% 99%; /* #fffefa */
+    --card-foreground: 24 10% 10%;
+    --popover: 48 100% 99%;
+    --popover-foreground: 24 10% 10%;
+    --primary: 24 10% 10%; /* 主按钮 = 墨底纸字 */
+    --primary-foreground: 43 43% 97%;
+    --secondary: 42 37% 93%;
+    --secondary-foreground: 24 10% 10%;
+    --muted: 42 37% 93%; /* #f3efe6 */
+    --muted-foreground: 33 5% 32%; /* #57534e */
+    --accent: 40 66% 88%; /* #f4e7cc 高亮 */
+    --accent-foreground: 24 10% 10%;
+    --destructive: 357 68% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 38 25% 86%; /* #e6dfd3 细线 */
+    --input: 38 22% 79%; /* #d6cdbd */
+    --ring: 357 68% 42%;
+    --radius: 0.125rem;
 
-    --side: 41 29% 89%;
-    --sunk: 42 50% 96%;
-    --edge: #141414;
-    --lift: 5px;
-    --grain: rgba(0, 0, 0, 0.07);
-    --link: 263 70% 50%;
-    --nav-active: #fde68a;
+    --brand: 357 68% 42%; /* #b4232a 砖红 */
+    --brand-ink: 0 0% 100%;
+    --faint: 33 6% 51%; /* #8a847c */
+    --side: 42 37% 95%;
+    --sunk: 42 37% 93%;
+    --rule: hsl(24 10% 10%);
+    --edge: hsl(38 22% 79%);
+    --link: 357 69% 37%;
+    --grain: rgba(28, 25, 23, 0.06);
   }
 
   .dark {
-    --background: 248 12% 13%;
-    --foreground: 48 15% 94%;
-    --card: 246 10% 19%;
-    --card-foreground: 48 15% 94%;
-    --popover: 246 10% 19%;
-    --popover-foreground: 48 15% 94%;
-    --primary: 258 90% 66%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 245 10% 23%;
-    --secondary-foreground: 48 15% 92%;
-    --muted: 245 10% 23%;
-    --muted-foreground: 240 5% 62%;
-    --accent: 245 10% 26%;
-    --accent-foreground: 48 15% 94%;
-    --destructive: 0 91% 71%;
-    --destructive-foreground: 0 0% 8%;
-    --border: 245 9% 25%;
-    --input: 252 19% 5%;
-    --ring: 258 90% 66%;
+    --background: 30 10% 8%; /* #161412 */
+    --foreground: 38 30% 89%; /* #ece6dc */
+    --card: 30 12% 10%; /* #1d1a17 */
+    --card-foreground: 38 30% 89%;
+    --popover: 30 12% 10%;
+    --popover-foreground: 38 30% 89%;
+    --primary: 38 30% 89%;
+    --primary-foreground: 30 10% 8%;
+    --secondary: 34 11% 12%;
+    --secondary-foreground: 38 30% 89%;
+    --muted: 34 11% 12%; /* #23201c */
+    --muted-foreground: 33 7% 63%; /* #aaa298 */
+    --accent: 37 29% 18%; /* #3a3020 */
+    --accent-foreground: 40 66% 88%;
+    --destructive: 358 70% 62%;
+    --destructive-foreground: 30 10% 8%;
+    --border: 36 11% 18%; /* #332f29 */
+    --input: 34 12% 23%; /* #423c34 */
+    --ring: 358 70% 62%;
 
-    --side: 249 12% 11%;
-    --sunk: 248 10% 15%;
-    --edge: #0c0b10;
-    --grain: rgba(255, 255, 255, 0.06);
-    --link: 256 100% 81%;
-    --nav-active: color-mix(in srgb, #8b5cf6 30%, hsl(246 10% 19%));
+    --brand: 358 70% 62%; /* #e2585e */
+    --brand-ink: 30 10% 8%;
+    --faint: 32 5% 45%;
+    --side: 30 11% 7%;
+    --sunk: 34 11% 12%;
+    --rule: hsl(38 30% 89%);
+    --edge: hsl(34 12% 23%);
+    --link: 357 79% 74%;
+    --grain: rgba(236, 230, 220, 0.05);
   }
 
   * {
@@ -83,25 +91,39 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter Variable', 'Noto Sans SC Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
-      'Noto Sans CJK SC', system-ui, sans-serif;
+    font-family: 'Inter Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC',
+      'Noto Sans SC Variable', system-ui, sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'ss03';
-    letter-spacing: -0.006em;
-    background-image: radial-gradient(var(--grain) 1px, transparent 1.3px);
-    background-size: 18px 18px;
-    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-serif {
+    font-family: 'Source Serif 4 Variable', 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC',
+      'Noto Serif SC Variable', 'STSong', 'SimSun', serif;
+    letter-spacing: -0.012em;
   }
 
   code,
   kbd,
   pre,
   .font-mono {
-    font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, Consolas, 'Noto Sans SC Variable', 'PingFang SC',
-      'Microsoft YaHei', monospace;
+    font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, Consolas, 'PingFang SC', 'Microsoft YaHei',
+      'Noto Sans SC Variable', monospace;
+  }
+
+  ::selection {
+    background: #f1d5c9;
+    color: #1c1917;
+  }
+  .dark ::selection {
+    background: #5a2d2d;
+    color: #ece6dc;
   }
 
   :focus-visible {
-    outline: 3px solid hsl(var(--ring));
+    outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -110,82 +132,94 @@
     height: 8px;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 8px;
+    background: hsl(var(--input));
+    border-radius: 0;
   }
 }
 
 @layer components {
-  /* 卡片/面板：粗边 + 硬阴影 */
+  /* 版块：纸面卡片 + 1px 细线，无阴影；悬停时线条变墨色 */
   .surface {
     background: hsl(var(--card));
-    border: 2px solid var(--edge) !important;
-    border-radius: 5px;
-    box-shadow: var(--lift) var(--lift) 0 0 var(--edge);
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: 2px;
   }
   .surface-hover {
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    transition: border-color 0.15s ease;
   }
   .surface-hover:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: calc(var(--lift) + 2px) calc(var(--lift) + 2px) 0 0 var(--edge);
+    border-color: var(--rule) !important;
   }
   .tile {
-    border: 2px solid var(--edge) !important;
-    border-radius: 4px;
-    box-shadow: 3px 3px 0 0 var(--edge);
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: 2px;
   }
   .field {
-    background: hsl(var(--sunk));
-    border: 2px solid var(--edge) !important;
-    border-radius: 4px;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--input)) !important;
+    border-radius: 2px;
+  }
+  .field:focus-within,
+  .field:focus {
+    border-color: var(--rule) !important;
   }
   .chip {
-    border: 2px solid var(--edge) !important;
-    border-radius: 6px;
-    box-shadow: 2px 2px 0 0 var(--edge);
+    border: 1px solid hsl(var(--input)) !important;
+    border-radius: 2px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
+  /* 按钮：细墨线、方角、字距略开；主按钮墨底纸字 */
   .btn-brutal {
-    border: 2px solid var(--edge) !important;
-    border-radius: 4px;
-    box-shadow: 3px 3px 0 0 var(--edge);
-    font-family: 'JetBrains Mono Variable', ui-monospace, 'Noto Sans SC Variable', 'PingFang SC', monospace;
-    font-weight: 700;
-    font-style: italic;
-    letter-spacing: -0.01em;
-    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s;
+    border: 1px solid var(--rule) !important;
+    border-radius: 2px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: background 0.15s ease, opacity 0.15s ease, color 0.15s ease;
   }
   .btn-brutal:hover:not(:disabled) {
-    transform: translate(-1px, -1px);
-    box-shadow: 4px 4px 0 0 var(--edge);
+    opacity: 0.88;
   }
-  .btn-brutal:active:not(:disabled) {
-    transform: translate(3px, 3px);
-    box-shadow: 0 0 0 0 var(--edge);
-  }
+  /* 导航激活：墨色文字 + 左侧砖红竖线 */
   .nav-active {
-    background: var(--nav-active);
+    position: relative;
     color: hsl(var(--foreground));
-    border: 2px solid var(--edge);
-    border-radius: 4px;
-    box-shadow: 3px 3px 0 0 var(--edge);
-    font-style: italic;
+    background: hsl(var(--card));
+    border-radius: 0;
+    box-shadow: inset 2px 0 0 hsl(var(--brand));
   }
+  /* 刊头：顶部一道墨线 */
   .topline::before {
     content: '';
     position: fixed;
     inset: 0 0 auto 0;
-    height: 4px;
+    height: 3px;
     z-index: 60;
-    background: hsl(var(--primary));
-    border-bottom: 2px solid var(--edge);
+    background: var(--rule);
   }
+  /* 原「斜体」标题统一改为衬线 */
   .slant {
-    font-style: italic;
-    letter-spacing: -0.02em;
+    font-family: 'Source Serif 4 Variable', 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC',
+      'Noto Serif SC Variable', 'STSong', serif;
+    font-style: normal;
+    letter-spacing: -0.012em;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--brand));
+  }
+  .rule-top {
+    border-top: 2px solid var(--rule);
+  }
+  .rule-bottom {
+    border-bottom: 1px solid var(--rule);
   }
   .checker {
-    background-color: hsl(var(--sunk));
+    background-color: hsl(var(--muted));
     background-image: linear-gradient(45deg, var(--grain) 25%, transparent 25%),
       linear-gradient(-45deg, var(--grain) 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, var(--grain) 75%),
@@ -198,18 +232,24 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) transparent;
+    scrollbar-color: hsl(var(--input)) transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 9999px;
+    background: hsl(var(--input));
   }
   .tnum {
     font-variant-numeric: tabular-nums;
+  }
+  .text-brand {
+    color: hsl(var(--brand));
+  }
+  .bg-brand {
+    background: hsl(var(--brand));
+    color: hsl(var(--brand-ink));
   }
   @keyframes rise {
     from {

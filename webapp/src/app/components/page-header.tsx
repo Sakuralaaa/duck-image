@@ -6,16 +6,16 @@ interface PageHeaderProps {
   description?: string;
   actions?: ReactNode;
   showQueue?: boolean;
+  eyebrow?: string;
 }
 
-export function PageHeader({ title, description, actions, showQueue = true }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, showQueue = true, eyebrow }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="rule-bottom mb-6 flex flex-col gap-3 pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
-        <h1 className="slant text-2xl font-extrabold sm:text-3xl">
-          <span className="bg-[linear-gradient(transparent_62%,hsl(var(--primary)/0.55)_62%)] px-0.5">{title}</span>
-        </h1>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+        <div className="eyebrow mb-1.5">DuckAI CPA · {eyebrow ?? 'Console'}</div>
+        <h1 className="slant text-[30px] font-bold leading-[1.12] sm:text-[38px]">{title}</h1>
+        {description ? <p className="mt-2 max-w-2xl text-[15px] text-muted-foreground">{description}</p> : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {showQueue ? <QueueStatusChips /> : null}
