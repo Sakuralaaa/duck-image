@@ -125,7 +125,7 @@ Model IDs are resolved dynamically; aliases (e.g. `gpt-6`, `duck`) are accepted.
 
 ### Option A — GHCR image with Docker Compose (recommended)
 
-Image: `ghcr.io/sakuralaaa/duckai-cpa:latest` (minimal Alpine + musl binary, `linux/amd64`).
+Image: `ghcr.io/sakuralaaa/duckai-cpa:latest` (minimal Alpine + musl binary, `linux/amd64` + `linux/arm64`).
 Save this as `compose.yml` and run `docker compose up -d`:
 
 ```yaml
@@ -252,7 +252,7 @@ also_latest: false     # also push :latest
 
 - always pushes `ghcr.io/sakuralaaa/duckai-cpa:<version>`;
 - `also_latest: true` additionally pushes `:latest` (used by the Quick Start above);
-- image platform: `linux/amd64` (arm64 users can build locally with `bun-linux-arm64-musl`);
+- image platforms: `linux/amd64` and `linux/arm64` (multi-arch manifest);
 - old Node.js images/release archives are no longer generated.
 
 **Binaries** — `Actions → publish-binaries` (builds every platform natively and attaches the archives to a

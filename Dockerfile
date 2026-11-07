@@ -8,7 +8,7 @@
 #
 # 设计：
 #   - build 阶段用 node:24-bookworm-slim 安装依赖 + 构建管理后台，并从官方 Bun 镜像
-#     复制 bun 可执行文件，交叉编译 **musl** 单文件二进制（bun-linux-x64-musl）；
+#     复制 bun 可执行文件，交叉编译 **musl** 单文件二进制（bun-linux-{x64,arm64}-musl，按 TARGETARCH）；
 #   - runtime 阶段只有 alpine:3.20 + ca-certificates + libstdc++（musl 运行时的依赖）+ 二进制；
 #     不装 Node.js、npm 或 node_modules。
 #   - 镜像未压缩约 150 MB、压缩后约 56 MB（Bun 运行时占体积主体，详见 docs/BINARY-BUILDS.md）。
@@ -20,7 +20,10 @@
 # ---------------------------------------------------------------------------
 
 # ---------- 构建阶段：web + 单文件二进制 ----------
-FROM node:24-bookworm-slim AS build
+FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS build
+
+# 多架构：构建阶段始终跑在构建机原生架构，按 TARGETARCH 交叉编译 musl 二进制（amd64 → x64，arm64 → arm64）
+ARG TARGETARCH=amd64
 
 WORKDIR /app
 
@@ -37,7 +40,9 @@ COPY config ./config
 COPY src ./src
 COPY scripts/build-exe.mjs ./scripts/build-exe.mjs
 RUN npm run build:web \
- && node scripts/build-exe.mjs --target=bun-linux-x64-musl --skip-web-build
+ && case "$TARGETARCH" in arm64) BUN_ARCH=arm64 ;; *) BUN_ARCH=x64 ;; esac \
+ && node scripts/build-exe.mjs --target=bun-linux-${BUN_ARCH}-musl --skip-web-build \
+ && mkdir -p /app/out && cp dist/linux-${BUN_ARCH}-musl/duckai-cpa dist/linux-${BUN_ARCH}-musl/RUN-README.txt /app/out/
 
 # ---------- 运行阶段：最小 Alpine + 二进制 ----------
 FROM alpine:3.20
@@ -66,8 +71,8 @@ RUN apk add --no-cache ca-certificates libstdc++ \
  && mkdir -p /data/images \
  && chown -R duckai:duckai /data
 
-COPY --from=build /app/dist/linux-x64-musl/duckai-cpa /usr/local/bin/duckai-cpa
-COPY --from=build /app/dist/linux-x64-musl/RUN-README.txt /usr/local/share/duckai-cpa/RUN-README.txt
+COPY --from=build /app/out/duckai-cpa /usr/local/bin/duckai-cpa
+COPY --from=build /app/out/RUN-README.txt /usr/local/share/duckai-cpa/RUN-README.txt
 
 USER duckai
 

@@ -19,7 +19,7 @@ ghcr.io/sakuralaaa/duckai-cpa:latest
 ```
 
 - 基础镜像：Alpine 3.20 + musl 单文件二进制；
-- 默认平台：`linux/amd64`；
+- 平台：`linux/amd64` 与 `linux/arm64`（多架构清单，自动匹配）；
 - 容器用户：**UID/GID 10001:10001**；
 - 默认数据目录：`/data`；
 - 推荐使用 **named volume**（`duckai-cpa-data:/data`），不要用 root 拥有的 bind mount。
